@@ -48,7 +48,17 @@ fun QuizScreen(
         return
     }
 
-    val currentQuestion = viewModel.currentQuestion
+    val currentQuestion = uiState.currentQuestion
+
+    if (currentQuestion == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Aucune question disponible.")
+        }
+        return
+    }
 
     val isWide =
         adaptiveInfo.windowSizeClass.windowWidthSizeClass !=

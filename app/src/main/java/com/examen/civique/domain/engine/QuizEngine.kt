@@ -16,7 +16,7 @@ class QuizEngine {
 
     fun selectAnswer(state: QuizState, index: Int): QuizState {
         if (state.answerValidated || state.quizFinished) return state
-        val currentQuestion = state.questions[state.currentQuestionIndex]
+        val currentQuestion = state.currentQuestion ?: return state
         if (index !in currentQuestion.answers.indices) return state
         return state.copy(selectedAnswerIndex = index)
     }
@@ -24,7 +24,7 @@ class QuizEngine {
     fun validateAnswer(state: QuizState): QuizState {
         if (state.answerValidated || state.quizFinished) return state
         val selectedAnswer = state.selectedAnswerIndex ?: return state
-        val currentQuestion = state.questions[state.currentQuestionIndex]
+        val currentQuestion = state.currentQuestion ?: return state
         val isCorrect = selectedAnswer == currentQuestion.correctAnswerIndex
         val quizAnswer = QuizAnswer(currentQuestion, selectedAnswer, isCorrect)
         return state.copy(
@@ -35,7 +35,7 @@ class QuizEngine {
     }
 
     fun nextQuestion(state: QuizState): QuizState {
-        if (!state.answerValidated) return state
+        if (state.quizFinished || !state.answerValidated) return state
         return if (state.currentQuestionIndex < state.questions.lastIndex) {
             state.copy(
                 currentQuestionIndex = state.currentQuestionIndex + 1,

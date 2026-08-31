@@ -3,7 +3,6 @@ package com.examen.civique.ui.quiz
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examen.civique.domain.engine.QuizEngine
-import com.examen.civique.domain.model.Question
 import com.examen.civique.domain.model.QuizAnswer
 import com.examen.civique.domain.model.QuizState
 import com.examen.civique.domain.repository.QuestionRepository
@@ -26,8 +25,7 @@ class QuizViewModel(
     val uiState: StateFlow<QuizState> =
         _uiState.asStateFlow()
 
-    val currentQuestion: Question
-        get() = _uiState.value.currentQuestion!!
+    private var resultSaved = false
 
     val wrongAnswers: List<QuizAnswer>
         get() = _uiState.value.wrongAnswers
@@ -41,21 +39,29 @@ class QuizViewModel(
     }
 
     fun nextQuestion() {
-        val nextState = engine.nextQuestion(_uiState.value)
+        val currentState = _uiState.value
+
+        if (currentState.quizFinished) return
+
+        val nextState = engine.nextQuestion(currentState)
         _uiState.value = nextState
 
-        if (nextState.quizFinished) {
-            saveResult()
+        if (
+            !currentState.quizFinished &&
+            nextState.quizFinished &&
+            !resultSaved
+        ) {
+            resultSaved = true
+            saveResult(nextState)
         }
     }
 
     fun resetQuiz() {
+        resultSaved = false
         _uiState.value = engine.createInitialState(questionRepository.getQuestions())
     }
 
-    private fun saveResult() {
-        val state = _uiState.value
-
+    private fun saveResult(state: QuizState) {
         viewModelScope.launch {
             resultRepository.saveQuizResult(
                 score = state.score,
