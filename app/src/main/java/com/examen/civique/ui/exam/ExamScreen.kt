@@ -1,5 +1,6 @@
 package com.examen.civique.ui.exam
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -43,6 +44,10 @@ fun ExamScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(viewModel) {
+        viewModel.startExam()
+    }
 
     var showFinishDialog by remember {
         mutableStateOf(false)
@@ -114,6 +119,10 @@ fun ExamScreen(
             viewModel.finishBecauseAppLeft()
         }
     )
+
+    BackHandler(enabled = !uiState.examFinished) {
+        viewModel.finishBecauseAppLeft()
+    }
 
     LaunchedEffect(uiState.examFinished) {
         if (uiState.examFinished) {

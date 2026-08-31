@@ -22,6 +22,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import com.examen.civique.data.local.database.DatabaseProvider
 import com.examen.civique.data.repository.AndroidCourseProgressRepository
@@ -95,18 +96,8 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
             )
         )
 
-    val examViewModel: ExamViewModel =
-        viewModel(
-            factory = ExamViewModelFactory(
-                questionRepository = questionRepository
-            )
-        )
-
     val quizUiState by
     quizViewModel.uiState.collectAsStateWithLifecycle()
-
-    val examUiState by
-    examViewModel.uiState.collectAsStateWithLifecycle()
 
     val statsUiState by
     statsViewModel.uiState.collectAsStateWithLifecycle()
@@ -224,10 +215,7 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
                 },
 
                 onStartExam = {
-
-                    examViewModel.resetExam()
-
-                    navController.navigate("exam")
+                    navController.navigate("examFlow")
                 },
 
                 onOpenCourses = {
@@ -342,88 +330,133 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
             )
         }
 
-        composable("exam") {
+        navigation(
+            startDestination = "exam",
+            route = "examFlow"
+        ) {
 
-            ExamScreen(
-                viewModel = examViewModel,
-                adaptiveInfo = adaptiveInfo,
+            composable("exam") { backStackEntry ->
 
-                onExamFinished = {
-
-                    navController.navigate("examResult") {
-
-                        popUpTo("exam") {
-                            inclusive = true
-                        }
-                    }
+                val examFlowEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("examFlow")
                 }
-            )
-        }
 
-        composable("examResult") {
-
-            ExamResultScreen(
-                score = examViewModel.score,
-                totalQuestions =
-                    examUiState.questions.size,
-                wrongAnswersCount =
-                    examViewModel.wrongAnswersCount,
-                unansweredQuestionsCount =
-                    examViewModel.unansweredQuestionsCount,
-                finishReason =
-                    examUiState.finishReason,
-
-                onReviewErrors = {
-
-                    navController.navigate(
-                        "examReview"
+                val examViewModel: ExamViewModel =
+                    viewModel(
+                        viewModelStoreOwner = examFlowEntry,
+                        factory = ExamViewModelFactory(
+                            questionRepository = questionRepository
+                        )
                     )
-                },
 
-                onRestartExam = {
+                ExamScreen(
+                    viewModel = examViewModel,
+                    adaptiveInfo = adaptiveInfo,
 
-                    examViewModel.resetExam()
+                    onExamFinished = {
 
-                    navController.navigate("exam") {
+                        navController.navigate("examResult") {
 
-                        popUpTo("examResult") {
-                            inclusive = true
+                            popUpTo("exam") {
+                                inclusive = true
+                            }
                         }
                     }
-                },
+                )
+            }
 
-                onGoHome = {
+            composable("examResult") { backStackEntry ->
 
-                    examViewModel.resetExam()
-
-                    navController.navigate("home") {
-
-                        popUpTo("home") {
-                            inclusive = true
-                        }
-                    }
+                val examFlowEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("examFlow")
                 }
-            )
-        }
 
-        composable("examReview") {
+                val examViewModel: ExamViewModel =
+                    viewModel(
+                        viewModelStoreOwner = examFlowEntry,
+                        factory = ExamViewModelFactory(
+                            questionRepository = questionRepository
+                        )
+                    )
 
-            ExamReviewScreen(
-                errors =
-                    examViewModel.wrongAnswerReviews,
+                val examUiState by
+                    examViewModel.uiState.collectAsStateWithLifecycle()
 
-                onGoHome = {
+                ExamResultScreen(
+                    score = examViewModel.score,
+                    totalQuestions =
+                        examUiState.questions.size,
+                    wrongAnswersCount =
+                        examViewModel.wrongAnswersCount,
+                    unansweredQuestionsCount =
+                        examViewModel.unansweredQuestionsCount,
+                    finishReason =
+                        examUiState.finishReason,
 
-                    examViewModel.resetExam()
+                    onReviewErrors = {
 
-                    navController.navigate("home") {
+                        navController.navigate(
+                            "examReview"
+                        )
+                    },
 
-                        popUpTo("home") {
-                            inclusive = true
+                    onRestartExam = {
+
+                        examViewModel.startNewExam()
+
+                        navController.navigate("exam") {
+
+                            popUpTo("examResult") {
+                                inclusive = true
+                            }
+                        }
+                    },
+
+                    onGoHome = {
+
+                        navController.navigate("home") {
+
+                            popUpTo("examFlow") {
+                                inclusive = true
+                            }
+
+                            launchSingleTop = true
                         }
                     }
+                )
+            }
+
+            composable("examReview") { backStackEntry ->
+
+                val examFlowEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry("examFlow")
                 }
-            )
+
+                val examViewModel: ExamViewModel =
+                    viewModel(
+                        viewModelStoreOwner = examFlowEntry,
+                        factory = ExamViewModelFactory(
+                            questionRepository = questionRepository
+                        )
+                    )
+
+                ExamReviewScreen(
+                    errors =
+                        examViewModel.wrongAnswerReviews,
+
+                    onGoHome = {
+
+                        navController.navigate("home") {
+
+                            popUpTo("examFlow") {
+                                inclusive = true
+                            }
+
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
         }
     }
 }

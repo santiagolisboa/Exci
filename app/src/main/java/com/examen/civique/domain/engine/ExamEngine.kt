@@ -55,23 +55,24 @@ class ExamEngine {
     }
 
     fun finishExam(state: ExamState, reason: ExamFinishReason): ExamState {
+        if (state.examFinished) return state
         return state.copy(
             examFinished = true,
             finishReason = reason
         )
     }
 
-    fun tick(state: ExamState): ExamState {
+    fun updateRemainingTime(state: ExamState, remainingSeconds: Int): ExamState {
         if (state.examFinished) return state
-        val remaining = state.remainingSeconds
-        return if (remaining <= 1) {
+        val remaining = remainingSeconds.coerceAtLeast(0)
+        return if (remaining == 0) {
             state.copy(
                 remainingSeconds = 0,
                 examFinished = true,
                 finishReason = ExamFinishReason.TIME_UP
             )
         } else {
-            state.copy(remainingSeconds = remaining - 1)
+            state.copy(remainingSeconds = remaining)
         }
     }
 

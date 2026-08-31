@@ -1,5 +1,6 @@
 package com.examen.civique.ui.exam
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examen.civique.domain.engine.ExamEngine
@@ -29,6 +30,8 @@ class ExamViewModel(
         _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var deadlineElapsedRealtimeMillis: Long? = null
+    private var examStarted = false
 
     val currentQuestion: Question
         get() = _uiState.value.currentQuestion!!
@@ -59,10 +62,6 @@ class ExamViewModel(
                         !review.isCorrect
             }
 
-    init {
-        startTimer()
-    }
-
     fun selectAnswer(index: Int) {
         _uiState.value = engine.selectAnswer(_uiState.value, index)
     }
@@ -88,13 +87,24 @@ class ExamViewModel(
     }
 
     private fun finishExamWithReason(reason: ExamFinishReason) {
-        timerJob?.cancel()
+        if (_uiState.value.examFinished) return
+        stopTimer()
         _uiState.value = engine.finishExam(_uiState.value, reason)
     }
 
-    private fun startTimer() {
+    fun startExam() {
+        if (examStarted) return
 
-        timerJob?.cancel()
+        examStarted = true
+        startTimer()
+    }
+
+    private fun startTimer() {
+        stopTimer()
+
+        deadlineElapsedRealtimeMillis =
+            SystemClock.elapsedRealtime() +
+                    _uiState.value.remainingSeconds * 1000L
 
         timerJob = viewModelScope.launch {
 
@@ -102,26 +112,51 @@ class ExamViewModel(
                 isActive &&
                 !_uiState.value.examFinished
             ) {
+                val deadline = deadlineElapsedRealtimeMillis ?: break
+                val remainingMillis =
+                    deadline - SystemClock.elapsedRealtime()
+                val remainingSeconds =
+                    if (remainingMillis <= 0L) {
+                        0
+                    } else {
+                        ((remainingMillis + 999L) / 1000L).toInt()
+                    }
 
-                delay(1000)
+                _uiState.value = engine.updateRemainingTime(
+                    state = _uiState.value,
+                    remainingSeconds = remainingSeconds
+                )
 
-                _uiState.value = engine.tick(_uiState.value)
+                if (_uiState.value.examFinished) {
+                    deadlineElapsedRealtimeMillis = null
+                    break
+                }
+
+                val delayUntilNextSecond =
+                    remainingMillis - (remainingSeconds - 1L) * 1000L
+
+                delay(delayUntilNextSecond.coerceAtLeast(1L))
             }
         }
     }
 
-    fun resetExam() {
-
-        timerJob?.cancel()
+    fun startNewExam() {
+        stopTimer()
 
         _uiState.value = engine.createInitialState(questionRepository.getQuestions())
 
+        examStarted = true
         startTimer()
     }
 
-    override fun onCleared() {
-
+    private fun stopTimer() {
         timerJob?.cancel()
+        timerJob = null
+        deadlineElapsedRealtimeMillis = null
+    }
+
+    override fun onCleared() {
+        stopTimer()
 
         super.onCleared()
     }
