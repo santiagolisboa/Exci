@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.examen.civique.ui.components.AnswerOption
 
 @Composable
 fun QuizScreen(
@@ -116,6 +116,8 @@ fun QuizScreen(
                                 answer = currentQuestion.answers[i],
                                 index = i,
                                 selectedAnswerIndex = uiState.selectedAnswerIndex,
+                                answerValidated = uiState.answerValidated,
+                                correctAnswerIndex = currentQuestion.correctAnswerIndex,
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     viewModel.selectAnswer(i)
@@ -128,6 +130,8 @@ fun QuizScreen(
                                     answer = currentQuestion.answers[i + 1],
                                     index = i + 1,
                                     selectedAnswerIndex = uiState.selectedAnswerIndex,
+                                    answerValidated = uiState.answerValidated,
+                                    correctAnswerIndex = currentQuestion.correctAnswerIndex,
                                     modifier = Modifier.weight(1f),
                                     onClick = {
                                         viewModel.selectAnswer(i + 1)
@@ -150,6 +154,8 @@ fun QuizScreen(
                         answer = answer,
                         index = index,
                         selectedAnswerIndex = uiState.selectedAnswerIndex,
+                        answerValidated = uiState.answerValidated,
+                        correctAnswerIndex = currentQuestion.correctAnswerIndex,
                         modifier = Modifier.fillMaxWidth(),
                         onClick = {
                             viewModel.selectAnswer(index)
@@ -226,21 +232,18 @@ fun QuizAnswerButton(
     answer: String,
     index: Int,
     selectedAnswerIndex: Int?,
+    answerValidated: Boolean,
+    correctAnswerIndex: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
 
-    OutlinedButton(
+    AnswerOption(
+        answer = answer,
+        selected = selectedAnswerIndex == index,
+        validated = answerValidated,
+        correct = index == correctAnswerIndex,
         onClick = onClick,
-        modifier = modifier.padding(vertical = 6.dp)
-    ) {
-
-        Text(
-            text = if (selectedAnswerIndex == index) {
-                "✓ $answer"
-            } else {
-                answer
-            }
-        )
-    }
+        modifier = modifier
+    )
 }

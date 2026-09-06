@@ -1,22 +1,27 @@
 package com.examen.civique.ui.exam
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,12 +35,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.examen.civique.ui.components.AnswerOption
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ExamScreen(
     viewModel: ExamViewModel,
@@ -222,45 +231,12 @@ fun ExamScreen(
             modifier = Modifier.height(20.dp)
         )
 
-        Text(
-            text = "Questions",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
+        ExamQuestionNavigator(
+            questionIds = uiState.questions.map { it.id },
+            currentQuestionIndex = uiState.currentQuestionIndex,
+            answeredQuestionIds = uiState.selectedAnswers.keys,
+            onQuestionSelected = viewModel::goToQuestion
         )
-
-        Spacer(
-            modifier = Modifier.height(8.dp)
-        )
-
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-
-            uiState.questions.forEachIndexed { index, question ->
-
-                val answered =
-                    uiState.selectedAnswers.containsKey(question.id)
-
-                val isCurrent =
-                    index == uiState.currentQuestionIndex
-
-                OutlinedButton(
-                    onClick = {
-                        viewModel.goToQuestion(index)
-                    }
-                ) {
-
-                    Text(
-                        text = when {
-                            isCurrent -> "➤ ${index + 1}"
-                            answered -> "✓ ${index + 1}"
-                            else -> "${index + 1}"
-                        }
-                    )
-                }
-            }
-        }
 
         Spacer(
             modifier = Modifier.height(28.dp)
@@ -404,17 +380,72 @@ fun ExamAnswerButton(
     onClick: () -> Unit
 ) {
 
-    OutlinedButton(
+    AnswerOption(
+        answer = answer,
+        selected = selectedAnswerIndex == index,
         onClick = onClick,
-        modifier = modifier.padding(vertical = 6.dp)
-    ) {
+        modifier = modifier
+    )
+}
 
-        Text(
-            text = if (selectedAnswerIndex == index) {
-                "✓ $answer"
-            } else {
-                answer
+@Composable
+private fun ExamQuestionNavigator(
+    questionIds: List<String>,
+    currentQuestionIndex: Int,
+    answeredQuestionIds: Set<String>,
+    onQuestionSelected: (Int) -> Unit
+) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(currentQuestionIndex) {
+        if (currentQuestionIndex in questionIds.indices) {
+            listState.animateScrollToItem(currentQuestionIndex)
+        }
+    }
+
+    LazyRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("exam_question_navigator"),
+        state = listState,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        itemsIndexed(questionIds) { index, questionId ->
+            val isCurrent = index == currentQuestionIndex
+            val answered = questionId in answeredQuestionIds
+            val containerColor = when {
+                isCurrent -> MaterialTheme.colorScheme.primary
+                answered -> MaterialTheme.colorScheme.secondaryContainer
+                else -> MaterialTheme.colorScheme.surface
             }
-        )
+            val contentColor = when {
+                isCurrent -> MaterialTheme.colorScheme.onPrimary
+                answered -> MaterialTheme.colorScheme.onSecondaryContainer
+                else -> MaterialTheme.colorScheme.onSurface
+            }
+            val stateLabel = when {
+                isCurrent -> "Question actuelle"
+                answered -> "Répondue"
+                else -> "Non répondue"
+            }
+
+            Button(
+                onClick = { onQuestionSelected(index) },
+                modifier = Modifier
+                    .size(42.dp)
+                    .semantics {
+                        contentDescription = "Question ${index + 1}"
+                        stateDescription = stateLabel
+                    },
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = containerColor,
+                    contentColor = contentColor
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+            ) {
+                Text("${index + 1}")
+            }
+        }
     }
 }

@@ -16,26 +16,87 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.examen.civique.domain.model.ThemeMode
 
 @Composable
 fun HomeScreen(
     progress: Int,
     quizCount: Int,
     adaptiveInfo: WindowAdaptiveInfo,
-    onStartQuiz: () -> Unit,
+    hasSavedQuiz: Boolean = false,
+    themeMode: ThemeMode? = null,
+    onStartNewQuiz: () -> Unit,
+    onContinueQuiz: () -> Unit = {},
+    onThemeSelected: (ThemeMode) -> Unit = {},
     onStartExam: () -> Unit = {},
     onOpenCourses: () -> Unit = {},
     onOpenErrors: () -> Unit = {},
     onOpenStats: () -> Unit = {}
 ) {
+    var showQuizChoice by remember { mutableStateOf(false) }
+    var showAppearance by remember { mutableStateOf(false) }
+    val effectiveTheme = themeMode ?: if (isSystemInDarkTheme()) {
+        ThemeMode.DARK
+    } else {
+        ThemeMode.LIGHT
+    }
+
+    if (showQuizChoice) {
+        AlertDialog(
+            onDismissRequest = { showQuizChoice = false },
+            title = { Text("Quiz en cours") },
+            text = { Text("Voulez-vous reprendre votre session ou recommencer ?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showQuizChoice = false
+                    onContinueQuiz()
+                }) { Text("Continuer le quiz") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showQuizChoice = false
+                    onStartNewQuiz()
+                }) { Text("Commencer un nouveau quiz") }
+            }
+        )
+    }
+
+    if (showAppearance) {
+        AlertDialog(
+            onDismissRequest = { showAppearance = false },
+            title = { Text("Apparence") },
+            text = {
+                Column {
+                    ThemeChoice("Mode clair", ThemeMode.LIGHT, effectiveTheme, onThemeSelected)
+                    ThemeChoice("Mode sombre", ThemeMode.DARK, effectiveTheme, onThemeSelected)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAppearance = false }) { Text("Fermer") }
+            }
+        )
+    }
 
     val isWide =
         adaptiveInfo.windowSizeClass.windowWidthSizeClass !=
@@ -54,11 +115,24 @@ fun HomeScreen(
                 .padding(24.dp)
         ) {
 
-            Text(
-                text = "🇫🇷 Examen Civique",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "🇫🇷 Examen Civique",
+                    fontSize = 30.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { showAppearance = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Paramètres"
+                    )
+                }
+            }
 
             Spacer(
                 modifier = Modifier.height(8.dp)
@@ -84,7 +158,9 @@ fun HomeScreen(
                         title = "📝 Quiz rapide",
                         description = "Entraîne-toi avec quelques questions",
                         modifier = Modifier.weight(1f),
-                        onClick = onStartQuiz
+                        onClick = {
+                            if (hasSavedQuiz) showQuizChoice = true else onStartNewQuiz()
+                        }
                     )
 
                     HomeLargeCard(
@@ -100,7 +176,9 @@ fun HomeScreen(
                 HomeLargeCard(
                     title = "📝 Quiz rapide",
                     description = "Entraîne-toi avec quelques questions",
-                    onClick = onStartQuiz
+                    onClick = {
+                        if (hasSavedQuiz) showQuizChoice = true else onStartNewQuiz()
+                    }
                 )
 
                 Spacer(
@@ -222,6 +300,28 @@ fun HomeScreen(
         }
     }
 }
+}
+
+@Composable
+private fun ThemeChoice(
+    label: String,
+    mode: ThemeMode,
+    selectedMode: ThemeMode,
+    onSelected: (ThemeMode) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onSelected(mode) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        RadioButton(
+            selected = mode == selectedMode,
+            onClick = { onSelected(mode) }
+        )
+        Text(text = label, modifier = Modifier.padding(start = 8.dp))
+    }
 }
 
 @Composable

@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.examen.civique.data.local.database.DatabaseProvider
 import com.examen.civique.data.repository.AndroidCourseProgressRepository
 import com.examen.civique.data.repository.AndroidQuizResultRepository
+import com.examen.civique.data.repository.AndroidQuizSessionRepository
 import com.examen.civique.data.repository.StaticCourseRepository
 import com.examen.civique.data.repository.StaticQuestionRepository
 import com.examen.civique.ui.courses.CoursesAdaptiveScreen
@@ -46,9 +47,14 @@ import com.examen.civique.ui.review.ErrorReviewScreen
 import com.examen.civique.ui.stats.StatsScreen
 import com.examen.civique.ui.stats.StatsViewModel
 import com.examen.civique.ui.stats.StatsViewModelFactory
+import com.examen.civique.domain.model.ThemeMode
 
 @Composable
-fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
+fun AppNavigation(
+    adaptiveInfo: WindowAdaptiveInfo,
+    themeMode: ThemeMode? = null,
+    onThemeSelected: (ThemeMode) -> Unit = {}
+) {
 
     val navController = rememberNavController()
 
@@ -68,6 +74,10 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
             database.quizResultDao()
         )
 
+    val quizSessionRepository = remember(context) {
+        AndroidQuizSessionRepository(context)
+    }
+
     val courseProgressRepository =
         AndroidCourseProgressRepository(
             database.courseProgressDao()
@@ -77,7 +87,8 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
         viewModel(
             factory = QuizViewModelFactory(
                 questionRepository = questionRepository,
-                resultRepository = quizResultRepository
+                resultRepository = quizResultRepository,
+                sessionRepository = quizSessionRepository
             )
         )
 
@@ -97,7 +108,10 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
         )
 
     val quizUiState by
-    quizViewModel.uiState.collectAsStateWithLifecycle()
+        quizViewModel.uiState.collectAsStateWithLifecycle()
+
+    val hasSavedQuiz by
+        quizViewModel.hasSavedSession.collectAsStateWithLifecycle()
 
     val statsUiState by
     statsViewModel.uiState.collectAsStateWithLifecycle()
@@ -206,13 +220,22 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
                 progress = statsUiState.averageScore,
                 quizCount = statsUiState.quizCount,
                 adaptiveInfo = adaptiveInfo,
+                hasSavedQuiz = hasSavedQuiz,
+                themeMode = themeMode,
 
-                onStartQuiz = {
-
-                    quizViewModel.resetQuiz()
-
+                onStartNewQuiz = {
+                    quizViewModel.startNewQuiz()
                     navController.navigate("quiz")
                 },
+
+                onContinueQuiz = {
+                    if (!quizViewModel.continueQuiz()) {
+                        quizViewModel.startNewQuiz()
+                    }
+                    navController.navigate("quiz")
+                },
+
+                onThemeSelected = onThemeSelected,
 
                 onStartExam = {
                     navController.navigate("examFlow")
@@ -281,7 +304,7 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
 
                 onRestartQuiz = {
 
-                    quizViewModel.resetQuiz()
+                    quizViewModel.startNewQuiz()
 
                     navController.navigate("quiz") {
 
@@ -297,9 +320,6 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
                 },
 
                 onGoHome = {
-
-                    quizViewModel.resetQuiz()
-
                     navController.navigate("home") {
 
                         popUpTo("home") {
@@ -317,9 +337,6 @@ fun AppNavigation(adaptiveInfo: WindowAdaptiveInfo) {
                     quizViewModel.wrongAnswers,
 
                 onGoHome = {
-
-                    quizViewModel.resetQuiz()
-
                     navController.navigate("home") {
 
                         popUpTo("home") {

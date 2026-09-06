@@ -7,12 +7,13 @@ import com.examen.civique.domain.model.Question
 
 private const val EXAM_QUESTION_COUNT = 40
 
-class ExamEngine {
+class ExamEngine(
+    private val questionOrder: (List<Question>) -> List<Question> = { it.shuffled() }
+) {
 
     fun createInitialState(questions: List<Question>): ExamState {
         return ExamState(
-            questions = questions
-                .shuffled()
+            questions = questionOrder(questions)
                 .take(EXAM_QUESTION_COUNT)
                 .map { it.shuffledAnswers() }
         )
