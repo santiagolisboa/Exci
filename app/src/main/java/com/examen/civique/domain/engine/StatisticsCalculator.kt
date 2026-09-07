@@ -17,19 +17,10 @@ object StatisticsCalculator {
     ): LearningStats {
         val quizzes = results.filter { it.type != SessionType.EXAM }
         val exams = results.filter { it.type == SessionType.EXAM }
-        val questionIds = questions.mapTo(mutableSetOf()) { it.id }
-        val seenIds = attempts.mapTo(mutableSetOf()) { it.questionId }.intersect(questionIds)
+        val progressResult = LearningProgressCalculator.calculate(questions, attempts)
+        val progress = progressResult.progress
         val correct = attempts.count { it.isCorrect }
-        val latestByQuestion = attempts
-            .sortedWith(compareBy<AnswerAttempt> { it.answeredAt }.thenBy { it.id })
-            .associateBy { it.questionId }
-        val mastery = questions.associate { question ->
-            question.id to when (latestByQuestion[question.id]?.isCorrect) {
-                null -> MasteryStatus.NEVER_SEEN
-                false -> MasteryStatus.TO_REVIEW
-                true -> MasteryStatus.MASTERED
-            }
-        }
+        val mastery = progressResult.masteryByQuestion
 
         val categoryStats = QuestionCategory.entries.map { category ->
             val categoryQuestions = questions.filter { it.category == category }
@@ -64,17 +55,17 @@ object StatisticsCalculator {
             averageExam = exams.map { it.percentage }.averageOrZero(),
             bestQuiz = quizzes.maxOfOrNull { it.percentage } ?: 0,
             bestExam = exams.maxOfOrNull { it.percentage } ?: 0,
-            totalQuestions = questions.size,
-            questionsSeen = seenIds.size,
-            questionsRemaining = (questions.size - seenIds.size).coerceAtLeast(0),
-            coverage = percentage(seenIds.size, questions.size),
+            totalQuestions = progress.totalQuestions,
+            questionsSeen = progress.seenQuestions,
+            questionsRemaining = progress.remainingQuestions,
+            coverage = progress.coverageRate,
             answered = attempts.size,
             correct = correct,
             wrong = attempts.size - correct,
             successRate = percentage(correct, attempts.size),
-            mastered = mastery.values.count { it == MasteryStatus.MASTERED },
-            toReview = mastery.values.count { it == MasteryStatus.TO_REVIEW },
-            neverSeen = mastery.values.count { it == MasteryStatus.NEVER_SEEN },
+            mastered = progress.masteredQuestions,
+            toReview = progress.reviewQuestions,
+            neverSeen = progress.remainingQuestions,
             masteryByQuestion = mastery,
             byCategory = categoryStats,
             weakCategories = categoryStats.filter { it.attempts > 0 }

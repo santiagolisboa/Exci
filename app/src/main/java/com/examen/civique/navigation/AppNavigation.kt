@@ -64,6 +64,7 @@ import com.examen.civique.domain.model.ThemeMode
 import com.examen.civique.domain.model.ExitConsequence
 import com.examen.civique.domain.model.ExitPolicy
 import com.examen.civique.domain.model.SessionType
+import com.examen.civique.domain.model.displayName
 
 @Composable
 fun AppNavigation(
@@ -147,6 +148,9 @@ fun AppNavigation(
 
     val statsUiState by
     statsViewModel.uiState.collectAsStateWithLifecycle()
+
+    val activeErrors by reviewViewModel.errors.collectAsStateWithLifecycle()
+    val favoriteIds by reviewViewModel.favoriteIds.collectAsStateWithLifecycle()
 
     val navBackStackEntry by
     navController.currentBackStackEntryAsState()
@@ -287,10 +291,14 @@ fun AppNavigation(
         composable("home") {
 
             HomeScreen(
-                progress = statsUiState.averageScore,
-                quizCount = statsUiState.quizCount,
+                progress = statsUiState.stats.progress,
+                successRate = statsUiState.stats.successRate,
+                weakestCategory = statsUiState.stats.weakCategories.firstOrNull()?.category?.displayName(),
+                errorCount = activeErrors.size,
+                favoriteCount = favoriteIds.size,
                 adaptiveInfo = adaptiveInfo,
                 hasSavedQuiz = hasSavedQuiz,
+                savedQuestionNumber = quizUiState.currentQuestionIndex.takeIf { hasSavedQuiz }?.plus(1),
                 themeMode = themeMode,
 
                 onStartNewQuiz = {

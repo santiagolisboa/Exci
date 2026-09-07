@@ -10,6 +10,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.assertDoesNotExist
 import com.examen.civique.navigation.AppNavigation
 import com.examen.civique.ui.theme.ExamenCiviqueTheme
 import com.examen.civique.ui.components.AnswerOption
@@ -34,7 +35,15 @@ class AdaptiveTest {
         }
 
         // Home screen title should be visible
-        composeTestRule.onNodeWithText("🇫🇷 Examen Civique").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Examen Civique").assertIsDisplayed()
+        composeTestRule.onNodeWithText("🇫🇷 Examen Civique").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Votre progression").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Entraînement").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("home_progress").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Simulation d’examen").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Mes erreurs").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Favoris").performScrollTo().assertIsDisplayed()
+        composeTestRule.onNodeWithText("Voir les statistiques").performScrollTo().assertIsDisplayed()
         
         // Navigation items should be visible
         composeTestRule.onNodeWithText("Accueil").assertIsDisplayed()

@@ -49,6 +49,15 @@ data class CategoryStats(
     val answered: Int get() = attempts
 }
 
+data class LearningProgress(
+    val totalQuestions: Int = 0,
+    val seenQuestions: Int = 0,
+    val masteredQuestions: Int = 0,
+    val reviewQuestions: Int = 0,
+    val remainingQuestions: Int = 0,
+    val coverageRate: Int = 0
+)
+
 data class LearningStats(
     val quizCount: Int = 0,
     val examCount: Int = 0,
@@ -71,7 +80,17 @@ data class LearningStats(
     val byCategory: List<CategoryStats> = emptyList(),
     val weakCategories: List<CategoryStats> = emptyList(),
     val mostMissedQuestionIds: List<String> = emptyList()
-)
+) {
+    val progress: LearningProgress
+        get() = LearningProgress(
+            totalQuestions = totalQuestions,
+            seenQuestions = questionsSeen,
+            masteredQuestions = mastered,
+            reviewQuestions = toReview,
+            remainingQuestions = questionsRemaining,
+            coverageRate = coverage
+        )
+}
 
 fun SessionType.toAnswerSource(): AnswerSource = when (this) {
     SessionType.QUIZ -> AnswerSource.QUIZ

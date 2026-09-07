@@ -50,6 +50,14 @@ class LearningFeaturesTest {
         assertEquals(10, stats.questionsSeen)
         assertEquals(234, stats.questionsRemaining)
         assertEquals(244, stats.totalQuestions)
+        val sixtyEight = (1..68).map { attempt("q$it", it % 3 != 0, it.toLong()) }
+        val progress = LearningProgressCalculator.calculate(bank244, sixtyEight).progress
+        assertEquals(68, progress.seenQuestions)
+        assertEquals(176, progress.remainingQuestions)
+        assertEquals(28, progress.coverageRate)
+        assertEquals(46, progress.masteredQuestions)
+        assertEquals(22, progress.reviewQuestions)
+        assertEquals(176, progress.remainingQuestions)
     }
 
     @Test
