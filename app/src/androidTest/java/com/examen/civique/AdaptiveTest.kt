@@ -8,9 +8,13 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollTo
 import com.examen.civique.navigation.AppNavigation
 import com.examen.civique.ui.theme.ExamenCiviqueTheme
 import com.examen.civique.ui.components.AnswerOption
+import com.examen.civique.data.local.courses
+import com.examen.civique.ui.courses.CourseDetailScreen
 import org.junit.Rule
 import org.junit.Test
 
@@ -66,5 +70,28 @@ class AdaptiveTest {
         }
 
         composeTestRule.onNodeWithText("Réponse sélectionnée").assertIsSelected()
+    }
+
+    @Test
+    fun courseDetailShowsProgressContentAndPracticeAction() {
+        composeTestRule.setContent {
+            ExamenCiviqueTheme {
+                CourseDetailScreen(
+                    course = courses.first(),
+                    progress = null,
+                    questionCountForLesson = { 10 },
+                    onLessonOpened = {},
+                    onLessonCompleted = {},
+                    onStartPractice = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithTag("course_detail").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Leçon 1 / 3").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("start_lesson_practice")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeTestRule.onNodeWithTag("complete_lesson").assertIsDisplayed()
     }
 }

@@ -22,6 +22,7 @@ class QuizSessionManager(
 
         sessionRepository.saveSession(
             QuizSession(
+                sessionType = state.sessionType,
                 questions = state.questions.map { question ->
                     SavedQuizQuestion(
                         id = question.id,
@@ -86,6 +87,7 @@ class QuizSessionManager(
         ) return null
 
         return QuizState(
+            sessionType = snapshot.sessionType,
             questions = restoredQuestions,
             currentQuestionIndex = snapshot.currentQuestionIndex,
             selectedAnswerIndex = selected,

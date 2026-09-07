@@ -1,6 +1,7 @@
 package com.examen.civique.domain.model
 
 data class QuizState(
+    val sessionType: SessionType = SessionType.QUIZ,
     val currentQuestionIndex: Int = 0,
     val selectedAnswerIndex: Int? = null,
     val answerValidated: Boolean = false,
@@ -9,6 +10,8 @@ data class QuizState(
     val questions: List<Question> = emptyList(),
     val answers: List<QuizAnswer> = emptyList()
 ) {
+    val isActive: Boolean
+        get() = questions.isNotEmpty() && !quizFinished
     val currentQuestion: Question?
         get() = questions.getOrNull(currentQuestionIndex)
 

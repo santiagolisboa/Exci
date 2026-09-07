@@ -3,11 +3,16 @@ package com.examen.civique.domain.engine
 import com.examen.civique.domain.model.Question
 import com.examen.civique.domain.model.QuizAnswer
 import com.examen.civique.domain.model.QuizState
+import com.examen.civique.domain.model.SessionType
 
 class QuizEngine {
 
-    fun createInitialState(questions: List<Question>): QuizState {
+    fun createInitialState(
+        questions: List<Question>,
+        sessionType: SessionType = SessionType.QUIZ
+    ): QuizState {
         return QuizState(
+            sessionType = sessionType,
             questions = questions
                 .shuffled()
                 .map { it.shuffledAnswers() }

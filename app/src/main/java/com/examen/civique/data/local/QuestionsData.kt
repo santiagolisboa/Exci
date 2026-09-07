@@ -5,7 +5,7 @@ import com.examen.civique.domain.model.Question
 import com.examen.civique.domain.model.QuestionCategory
 import com.examen.civique.domain.model.QuestionType
 
-val questions = listOf(
+private val rawQuestions = listOf(
 
     Question(
         id = "nat_pvr_001",
@@ -1340,5 +1340,56 @@ private fun officialQuestion(
     sourceId = "OFFICIAL_NATURALISATION_2026",
     verified = true
 )
+
+val questions: List<Question> = rawQuestions.map { question ->
+    question.copy(lessonId = lessonIdForQuestion(question.id))
+}
+
+private fun lessonIdForQuestion(id: String): String {
+    val number = id.substringAfterLast('_').toIntOrNull()
+        ?: error("Identifiant de question invalide : $id")
+
+    return when {
+        id.startsWith("nat_pvr_") -> when (number) {
+            in setOf(1, 7, 8, 9, 10, 11, 13, 14, 15, 19) -> "republic-symbols"
+            in 21..28, in 30..35 -> "secularism"
+            else -> "republic-values"
+        }
+        id.startsWith("nat_sip_") -> when (number) {
+            in setOf(1, 10, 23, 31, 37, 38) -> "executive-power"
+            in setOf(4, 8, 9, 19, 26, 27, 28, 29, 34, 35, 36) -> "local-government"
+            in 40..53 -> "european-union"
+            in setOf(14, 16, 17, 18, 25, 30, 32, 39) -> "parliament-constitution"
+            else -> "democracy-elections"
+        }
+        id.startsWith("nat_dd_") -> when (number) {
+            in setOf(3, 4, 5, 11, 12) -> "founding-rights"
+            in setOf(1, 2, 6, 7, 9, 10, 13, 14, 15, 29) -> "fundamental-freedoms"
+            in setOf(8, 20, 22, 23, 24, 27, 30, 32, 35, 36) -> "citizenship-duties"
+            in setOf(17, 34) -> "digital-social-life"
+            else -> "law-daily-life"
+        }
+        id.startsWith("nat_hgc_") -> when (number) {
+            in setOf(1, 6, 7, 8, 9) -> "revolution-empire"
+            in setOf(2, 3, 10, 14, 18, 25, 26, 41) -> "republic-social-progress"
+            in setOf(5, 11, 12, 16, 17, 19, 21, 22, 27, 29) -> "wars-resistance-memory"
+            in setOf(4, 15, 20, 28) -> "europe-history"
+            in setOf(13, 23, 24, 30, 31) -> "slavery-colonization"
+            in 32..43, in 45..56 -> "arts-literature"
+            in setOf(58, 59, 61, 62, 63, 66, 67, 71, 75) -> "overseas-france"
+            in setOf(57, 68, 70, 72, 73, 74, 76) -> "regions-cities"
+            else -> "metropolitan-geography"
+        }
+        id.startsWith("nat_vsf_") -> when (number) {
+            in setOf(1, 3, 6, 7, 11, 13, 15, 20, 25, 34, 42, 43) -> "family-civil-status"
+            in setOf(2, 4, 5) -> "housing-consumption-mobility"
+            in setOf(8, 9, 12) -> "emergencies-justice"
+            in 14..19 -> "health-social-protection"
+            in 21..31 -> "work-employment"
+            else -> "school-education"
+        }
+        else -> error("Question sans règle de rattachement : $id")
+    }
+}
 
 

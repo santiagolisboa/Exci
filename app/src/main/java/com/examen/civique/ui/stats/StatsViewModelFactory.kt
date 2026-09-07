@@ -2,10 +2,14 @@ package com.examen.civique.ui.stats
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.examen.civique.domain.repository.QuizResultRepository
+import com.examen.civique.domain.repository.LearningRepository
+import com.examen.civique.domain.repository.AnswerAttemptRepository
+import com.examen.civique.domain.repository.QuestionRepository
 
 class StatsViewModelFactory(
-    private val repository: QuizResultRepository
+    private val repository: LearningRepository,
+    private val attemptRepository: AnswerAttemptRepository,
+    private val questionRepository: QuestionRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -20,7 +24,9 @@ class StatsViewModelFactory(
         ) {
 
             return StatsViewModel(
-                repository = repository
+                repository = repository,
+                attemptRepository = attemptRepository,
+                questionRepository = questionRepository
             ) as T
         }
 

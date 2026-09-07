@@ -6,6 +6,7 @@ import com.examen.civique.domain.model.QuizSession
 import com.examen.civique.domain.model.SavedQuizAnswer
 import com.examen.civique.domain.model.SavedQuizQuestion
 import com.examen.civique.domain.repository.QuizSessionRepository
+import com.examen.civique.domain.model.SessionType
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -33,6 +34,7 @@ class AndroidQuizSessionRepository(context: Context) : QuizSessionRepository {
     }
 
     private fun QuizSession.toJson() = JSONObject().apply {
+        put("sessionType", sessionType.name)
         put("currentQuestionIndex", currentQuestionIndex)
         put("selectedAnswerIndex", selectedAnswerIndex ?: JSONObject.NULL)
         put("answerValidated", answerValidated)
@@ -92,6 +94,9 @@ class AndroidQuizSessionRepository(context: Context) : QuizSessionRepository {
         }
 
         return QuizSession(
+            sessionType = runCatching {
+                SessionType.valueOf(optString("sessionType", SessionType.QUIZ.name))
+            }.getOrDefault(SessionType.QUIZ),
             questions = savedQuestions,
             currentQuestionIndex = getInt("currentQuestionIndex"),
             selectedAnswerIndex = if (isNull("selectedAnswerIndex")) {

@@ -52,7 +52,8 @@ fun HomeScreen(
     onStartExam: () -> Unit = {},
     onOpenCourses: () -> Unit = {},
     onOpenErrors: () -> Unit = {},
-    onOpenStats: () -> Unit = {}
+    onOpenStats: () -> Unit = {},
+    onOpenFavorites: () -> Unit = {}
 ) {
     var showQuizChoice by remember { mutableStateOf(false) }
     var showAppearance by remember { mutableStateOf(false) }
@@ -236,7 +237,7 @@ fun HomeScreen(
                     title = "⭐",
                     label = "Favoris",
                     modifier = Modifier.weight(1f),
-                    onClick = {}
+                    onClick = onOpenFavorites
                 )
             }
 

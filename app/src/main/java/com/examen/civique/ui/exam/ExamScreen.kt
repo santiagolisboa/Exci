@@ -1,6 +1,5 @@
 package com.examen.civique.ui.exam
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,6 +24,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +57,7 @@ fun ExamScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
 
     LaunchedEffect(viewModel) {
         viewModel.startExam()
@@ -128,10 +133,6 @@ fun ExamScreen(
             viewModel.finishBecauseAppLeft()
         }
     )
-
-    BackHandler(enabled = !uiState.examFinished) {
-        viewModel.finishBecauseAppLeft()
-    }
 
     LaunchedEffect(uiState.examFinished) {
         if (uiState.examFinished) {
@@ -242,11 +243,20 @@ fun ExamScreen(
             modifier = Modifier.height(28.dp)
         )
 
-        Text(
-            text = currentQuestion.question,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.Top) {
+            Text(
+                text = currentQuestion.question,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { viewModel.toggleFavorite(currentQuestion.id) }) {
+                Icon(
+                    imageVector = if (currentQuestion.id in favoriteIds) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                    contentDescription = if (currentQuestion.id in favoriteIds) "Retirer des favoris" else "Ajouter aux favoris"
+                )
+            }
+        }
 
         Spacer(
             modifier = Modifier.height(24.dp)

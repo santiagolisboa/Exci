@@ -13,6 +13,7 @@ data class SavedQuizAnswer(
 )
 
 data class QuizSession(
+    val sessionType: SessionType = SessionType.QUIZ,
     val questions: List<SavedQuizQuestion>,
     val currentQuestionIndex: Int,
     val selectedAnswerIndex: Int?,

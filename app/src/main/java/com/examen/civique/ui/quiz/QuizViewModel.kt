@@ -3,21 +3,34 @@ package com.examen.civique.ui.quiz
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.examen.civique.domain.engine.QuizEngine
+import com.examen.civique.domain.engine.AnswerAttemptFactory
 import com.examen.civique.domain.model.QuizAnswer
 import com.examen.civique.domain.model.QuizState
 import com.examen.civique.domain.repository.QuestionRepository
-import com.examen.civique.domain.repository.QuizResultRepository
 import com.examen.civique.domain.repository.QuizSessionRepository
+import com.examen.civique.domain.repository.LearningRepository
+import com.examen.civique.domain.repository.FavoriteQuestionRepository
+import com.examen.civique.domain.repository.AnswerAttemptRepository
+import com.examen.civique.domain.model.AnswerAttempt
+import com.examen.civique.domain.model.SessionType
+import com.examen.civique.domain.model.toAnswerSource
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import com.examen.civique.domain.session.QuizSessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class QuizViewModel(
     private val questionRepository: QuestionRepository,
-    private val resultRepository: QuizResultRepository,
     sessionRepository: QuizSessionRepository,
+    private val learningRepository: LearningRepository,
+    private val attemptRepository: AnswerAttemptRepository,
+    private val favoriteRepository: FavoriteQuestionRepository,
     private val engine: QuizEngine = QuizEngine()
 ) : ViewModel() {
 
@@ -37,6 +50,11 @@ class QuizViewModel(
     val hasSavedSession: StateFlow<Boolean> = _hasSavedSession.asStateFlow()
 
     private var resultSaved = false
+    private val attemptMutex = Mutex()
+
+    val favoriteIds = favoriteRepository.observeFavoriteIds().stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet()
+    )
 
     val wrongAnswers: List<QuizAnswer>
         get() = _uiState.value.wrongAnswers
@@ -47,7 +65,18 @@ class QuizViewModel(
     }
 
     fun validateAnswer() {
-        _uiState.value = engine.validateAnswer(_uiState.value)
+        val before = _uiState.value
+        val after = engine.validateAnswer(before)
+        _uiState.value = after
+        val attempt = AnswerAttemptFactory.fromQuizValidation(before, after, System.currentTimeMillis())
+        if (attempt != null) {
+            viewModelScope.launch {
+                attemptMutex.withLock {
+                    attemptRepository.recordAttempt(attempt)
+                    learningRepository.updateErrorProjection(attempt)
+                }
+            }
+        }
         persistCurrentSession()
     }
 
@@ -74,10 +103,26 @@ class QuizViewModel(
     }
 
     fun startNewQuiz() {
+        startQuiz(questionRepository.getQuestions(), SessionType.QUIZ)
+    }
+
+    fun startQuiz(questionIds: Collection<String>, type: SessionType) {
+        val ids = questionIds.toSet()
+        startQuiz(questionRepository.getQuestions().filter { it.id in ids }, type)
+    }
+
+    private fun startQuiz(questions: List<com.examen.civique.domain.model.Question>, type: SessionType) {
         resultSaved = false
-        _uiState.value = engine.createInitialState(questionRepository.getQuestions())
+        _uiState.value = engine.createInitialState(questions, type)
         sessionManager.startNewSession(_uiState.value)
         _hasSavedSession.value = _uiState.value.questions.isNotEmpty()
+    }
+
+    fun saveActiveSession() = persistCurrentSession()
+
+    fun toggleFavorite(questionId: String) {
+        val favorite = questionId !in favoriteIds.value
+        viewModelScope.launch { favoriteRepository.setFavorite(questionId, favorite) }
     }
 
     fun continueQuiz(): Boolean {
@@ -99,10 +144,19 @@ class QuizViewModel(
 
     private fun saveResult(state: QuizState) {
         viewModelScope.launch {
-            resultRepository.saveQuizResult(
-                score = state.score,
-                totalQuestions = state.questions.size
+            learningRepository.saveCompletedSession(
+                type = state.sessionType,
+                answers = state.answers.map { it.toAttempt(state.sessionType) }
             )
         }
     }
+
+    private fun QuizAnswer.toAttempt(type: SessionType) = AnswerAttempt(
+        questionId = question.id,
+        category = question.category,
+        selectedAnswer = question.answers.getOrNull(selectedAnswerIndex),
+        isCorrect = isCorrect,
+        answeredAt = System.currentTimeMillis(),
+        source = type.toAnswerSource()
+    )
 }

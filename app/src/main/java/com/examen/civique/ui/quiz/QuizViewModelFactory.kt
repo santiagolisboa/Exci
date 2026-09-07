@@ -3,13 +3,17 @@ package com.examen.civique.ui.quiz
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.examen.civique.domain.repository.QuestionRepository
-import com.examen.civique.domain.repository.QuizResultRepository
 import com.examen.civique.domain.repository.QuizSessionRepository
+import com.examen.civique.domain.repository.LearningRepository
+import com.examen.civique.domain.repository.FavoriteQuestionRepository
+import com.examen.civique.domain.repository.AnswerAttemptRepository
 
 class QuizViewModelFactory(
     private val questionRepository: QuestionRepository,
-    private val resultRepository: QuizResultRepository,
-    private val sessionRepository: QuizSessionRepository
+    private val sessionRepository: QuizSessionRepository,
+    private val learningRepository: LearningRepository,
+    private val attemptRepository: AnswerAttemptRepository,
+    private val favoriteRepository: FavoriteQuestionRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -21,8 +25,10 @@ class QuizViewModelFactory(
 
             return QuizViewModel(
                 questionRepository = questionRepository,
-                resultRepository = resultRepository,
-                sessionRepository = sessionRepository
+                sessionRepository = sessionRepository,
+                learningRepository = learningRepository,
+                attemptRepository = attemptRepository,
+                favoriteRepository = favoriteRepository
             ) as T
         }
 

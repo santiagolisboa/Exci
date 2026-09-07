@@ -11,5 +11,8 @@ data class CourseProgressEntity(
 
     val completed: Boolean = false,
 
-    val completedAt: Long? = null
+    val completedAt: Long? = null,
+    val completedLessonIds: String = "",
+
+    val lastLessonId: String? = null
 )

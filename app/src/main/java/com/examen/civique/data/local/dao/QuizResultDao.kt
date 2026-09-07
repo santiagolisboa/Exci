@@ -12,7 +12,7 @@ interface QuizResultDao {
     @Insert
     suspend fun insert(
         result: QuizResultEntity
-    )
+    ): Long
 
     @Query(
         """

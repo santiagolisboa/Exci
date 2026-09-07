@@ -14,5 +14,6 @@ data class QuizResultEntity(
     val correctAnswers: Int,
     val wrongAnswers: Int,
     val percentage: Int,
-    val completedAt: Long
+    val completedAt: Long,
+    val sessionType: String = "QUIZ"
 )

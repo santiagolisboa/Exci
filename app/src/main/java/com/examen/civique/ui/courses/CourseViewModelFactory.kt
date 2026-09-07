@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.examen.civique.domain.repository.CourseProgressRepository
 import com.examen.civique.domain.repository.CourseRepository
+import com.examen.civique.domain.repository.QuestionRepository
 
 class CourseViewModelFactory(
     private val courseRepository: CourseRepository,
-    private val progressRepository: CourseProgressRepository
+    private val progressRepository: CourseProgressRepository,
+    private val questionRepository: QuestionRepository
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -23,7 +25,8 @@ class CourseViewModelFactory(
 
             return CourseViewModel(
                 courseRepository = courseRepository,
-                progressRepository = progressRepository
+                progressRepository = progressRepository,
+                questionRepository = questionRepository
             ) as T
         }
 

@@ -11,17 +11,8 @@ class AndroidCourseProgressRepository(
     private val courseProgressDao: CourseProgressDao
 ) : CourseProgressRepository {
 
-    override suspend fun markCourseCompleted(
-        courseId: Int
-    ) {
-
-        val progress = CourseProgressEntity(
-            courseId = courseId,
-            completed = true,
-            completedAt = System.currentTimeMillis()
-        )
-
-        courseProgressDao.saveProgress(progress)
+    override suspend fun saveProgress(progress: CourseProgress) {
+        courseProgressDao.saveProgress(progress.toEntity())
     }
 
     override fun getAllProgress(): Flow<List<CourseProgress>> =
@@ -42,6 +33,19 @@ fun CourseProgressEntity.toDomain(): CourseProgress {
     return CourseProgress(
         courseId = courseId,
         completed = completed,
-        completedAt = completedAt
+        completedAt = completedAt,
+        completedLessonIds = completedLessonIds
+            .split(',')
+            .filter { it.isNotBlank() }
+            .toSet(),
+        lastLessonId = lastLessonId
     )
 }
+
+private fun CourseProgress.toEntity() = CourseProgressEntity(
+    courseId = courseId,
+    completed = completed,
+    completedAt = completedAt,
+    completedLessonIds = completedLessonIds.sorted().joinToString(","),
+    lastLessonId = lastLessonId
+)

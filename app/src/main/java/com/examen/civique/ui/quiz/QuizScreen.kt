@@ -13,6 +13,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.runtime.Composable
@@ -36,6 +41,7 @@ fun QuizScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.quizFinished) {
 
@@ -80,10 +86,19 @@ fun QuizScreen(
                 .padding(32.dp)
         ) {
 
-            Text(
-                text = "Question ${uiState.currentQuestionIndex + 1} / ${uiState.questions.size}",
-                fontSize = 16.sp
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Question ${uiState.currentQuestionIndex + 1} / ${uiState.questions.size}",
+                    fontSize = 16.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { viewModel.toggleFavorite(currentQuestion.id) }) {
+                    Icon(
+                        imageVector = if (currentQuestion.id in favoriteIds) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                        contentDescription = if (currentQuestion.id in favoriteIds) "Retirer des favoris" else "Ajouter aux favoris"
+                    )
+                }
+            }
 
             Text(
                 text = "Score : ${uiState.score}",
