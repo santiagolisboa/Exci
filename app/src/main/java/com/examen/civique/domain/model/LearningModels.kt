@@ -13,7 +13,8 @@ data class AnswerAttempt(
     val selectedAnswer: String?,
     val isCorrect: Boolean,
     val answeredAt: Long,
-    val source: AnswerSource
+    val source: AnswerSource,
+    val syncId: String? = null
 )
 
 data class QuestionError(
@@ -32,7 +33,8 @@ data class SessionResult(
     val correctAnswers: Int,
     val wrongAnswers: Int,
     val percentage: Int,
-    val completedAt: Long
+    val completedAt: Long,
+    val syncId: String? = null
 )
 
 data class CategoryStats(

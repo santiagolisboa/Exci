@@ -16,9 +16,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.examen.civique.domain.model.displayName
+import com.examen.civique.domain.model.QuestionReportSource
+import com.examen.civique.ui.report.QuestionReportAction
+import com.examen.civique.ui.report.QuestionReportViewModel
 
 @Composable
-fun ErrorReviewScreen(viewModel: ReviewViewModel, onReview: (Set<String>) -> Unit) {
+fun ErrorReviewScreen(viewModel: ReviewViewModel, reportViewModel: QuestionReportViewModel, onReview: (Set<String>) -> Unit) {
     val errors by viewModel.errors.collectAsStateWithLifecycle()
     val favorites by viewModel.favoriteIds.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf<String?>(null) }
@@ -47,6 +50,11 @@ fun ErrorReviewScreen(viewModel: ReviewViewModel, onReview: (Set<String>) -> Uni
                                             if (question.id in favorites) "Retirer des favoris" else "Ajouter aux favoris"
                                         )
                                     }
+                                    QuestionReportAction(
+                                        question.id, QuestionReportSource.ERROR_REVIEW, reportViewModel,
+                                        selectedAnswer = item.error.lastWrongAnswer,
+                                        correctAnswer = question.answers.getOrNull(question.correctAnswerIndex)
+                                    )
                                 }
                                 Text(question.category.displayName(), color = MaterialTheme.colorScheme.primary)
                                 Text(if (item.error.errorCount == 1) "1 erreur" else "${item.error.errorCount} erreurs")

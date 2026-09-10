@@ -15,9 +15,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.examen.civique.domain.model.displayName
+import com.examen.civique.domain.model.QuestionReportSource
+import com.examen.civique.ui.report.QuestionReportAction
+import com.examen.civique.ui.report.QuestionReportViewModel
 
 @Composable
-fun FavoritesScreen(viewModel: ReviewViewModel, onReview: (Set<String>) -> Unit) {
+fun FavoritesScreen(viewModel: ReviewViewModel, reportViewModel: QuestionReportViewModel, onReview: (Set<String>) -> Unit) {
     val questions by viewModel.favorites.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -40,6 +43,10 @@ fun FavoritesScreen(viewModel: ReviewViewModel, onReview: (Set<String>) -> Unit)
                                     IconButton(onClick = { viewModel.toggleFavorite(question.id) }) {
                                         Icon(Icons.Filled.Star, "Retirer des favoris")
                                     }
+                                    QuestionReportAction(
+                                        question.id, QuestionReportSource.FAVORITES, reportViewModel,
+                                        correctAnswer = question.answers.getOrNull(question.correctAnswerIndex)
+                                    )
                                 }
                                 Text(question.category.displayName(), color = MaterialTheme.colorScheme.primary)
                                 if (expanded == question.id) {

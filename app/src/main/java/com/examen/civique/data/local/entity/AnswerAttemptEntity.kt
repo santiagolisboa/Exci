@@ -6,6 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "answer_records")
 data class AnswerAttemptEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val syncId: String? = null,
     val questionId: String,
     val category: String,
     val selectedAnswer: String?,

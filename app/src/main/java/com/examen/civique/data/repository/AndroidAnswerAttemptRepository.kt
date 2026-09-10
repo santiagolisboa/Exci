@@ -8,6 +8,7 @@ import com.examen.civique.domain.model.QuestionCategory
 import com.examen.civique.domain.repository.AnswerAttemptRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 class AndroidAnswerAttemptRepository(
     private val dao: LearningDao
@@ -26,6 +27,7 @@ class AndroidAnswerAttemptRepository(
 
     private fun AnswerAttempt.toEntity() = AnswerAttemptEntity(
         id = id,
+        syncId = syncId ?: UUID.randomUUID().toString(),
         questionId = questionId,
         category = category.name,
         selectedAnswer = selectedAnswer,
@@ -36,6 +38,7 @@ class AndroidAnswerAttemptRepository(
 
     private fun AnswerAttemptEntity.toDomain() = AnswerAttempt(
         id = id,
+        syncId = syncId,
         questionId = questionId,
         category = QuestionCategory.valueOf(category),
         selectedAnswer = selectedAnswer,

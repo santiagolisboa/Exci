@@ -6,6 +6,7 @@ import com.examen.civique.domain.model.QuizResult
 import com.examen.civique.domain.repository.QuizResultRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 class AndroidQuizResultRepository(
     private val quizResultDao: QuizResultDao
@@ -27,6 +28,7 @@ class AndroidQuizResultRepository(
             }
 
         val result = QuizResultEntity(
+            syncId = UUID.randomUUID().toString(),
             score = score,
             totalQuestions = totalQuestions,
             correctAnswers = score,

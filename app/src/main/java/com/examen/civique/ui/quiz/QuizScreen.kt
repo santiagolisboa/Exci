@@ -32,10 +32,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.window.core.layout.WindowWidthSizeClass
 import com.examen.civique.ui.components.AnswerOption
+import com.examen.civique.ui.report.QuestionReportAction
+import com.examen.civique.ui.report.QuestionReportViewModel
+import com.examen.civique.domain.model.QuestionReportSource
 
 @Composable
 fun QuizScreen(
     viewModel: QuizViewModel = viewModel(),
+    reportViewModel: QuestionReportViewModel,
     adaptiveInfo: WindowAdaptiveInfo,
     onQuizFinished: (Int) -> Unit
 ) {
@@ -98,6 +102,17 @@ fun QuizScreen(
                         contentDescription = if (currentQuestion.id in favoriteIds) "Retirer des favoris" else "Ajouter aux favoris"
                     )
                 }
+                QuestionReportAction(
+                    questionId = currentQuestion.id,
+                    source = when (uiState.sessionType) {
+                        com.examen.civique.domain.model.SessionType.ERROR_REVIEW -> QuestionReportSource.ERROR_REVIEW
+                        com.examen.civique.domain.model.SessionType.FAVORITES_REVIEW -> QuestionReportSource.FAVORITES
+                        else -> QuestionReportSource.QUIZ
+                    },
+                    viewModel = reportViewModel,
+                    selectedAnswer = currentQuestion.answers.getOrNull(uiState.selectedAnswerIndex ?: -1),
+                    correctAnswer = currentQuestion.answers.getOrNull(currentQuestion.correctAnswerIndex)
+                )
             }
 
             Text(

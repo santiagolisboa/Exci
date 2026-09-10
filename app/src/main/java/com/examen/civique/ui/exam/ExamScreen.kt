@@ -48,10 +48,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.window.core.layout.WindowWidthSizeClass
 import com.examen.civique.ui.components.AnswerOption
+import com.examen.civique.ui.report.QuestionReportAction
+import com.examen.civique.ui.report.QuestionReportViewModel
+import com.examen.civique.domain.model.QuestionReportSource
 
 @Composable
 fun ExamScreen(
     viewModel: ExamViewModel,
+    reportViewModel: QuestionReportViewModel,
     adaptiveInfo: WindowAdaptiveInfo,
     onExamFinished: () -> Unit
 ) {
@@ -256,6 +260,13 @@ fun ExamScreen(
                     contentDescription = if (currentQuestion.id in favoriteIds) "Retirer des favoris" else "Ajouter aux favoris"
                 )
             }
+            QuestionReportAction(
+                questionId = currentQuestion.id,
+                source = QuestionReportSource.EXAM,
+                viewModel = reportViewModel,
+                selectedAnswer = currentQuestion.answers.getOrNull(selectedAnswerIndex ?: -1),
+                correctAnswer = currentQuestion.answers.getOrNull(currentQuestion.correctAnswerIndex)
+            )
         }
 
         Spacer(

@@ -21,10 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.examen.civique.domain.model.QuestionReportSource
+import com.examen.civique.ui.report.QuestionReportAction
+import com.examen.civique.ui.report.QuestionReportViewModel
 
 @Composable
 fun ExamReviewScreen(
     errors: List<ExamAnswerReview>,
+    reportViewModel: QuestionReportViewModel,
     onGoHome: () -> Unit
 ) {
 
@@ -80,6 +84,14 @@ fun ExamReviewScreen(
                                 text = question.question,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
+                            )
+
+                            QuestionReportAction(
+                                question.id,
+                                QuestionReportSource.EXAM_REVIEW,
+                                reportViewModel,
+                                selectedAnswer = review.selectedAnswerIndex?.let(question.answers::getOrNull),
+                                correctAnswer = question.answers.getOrNull(question.correctAnswerIndex)
                             )
 
                             Spacer(

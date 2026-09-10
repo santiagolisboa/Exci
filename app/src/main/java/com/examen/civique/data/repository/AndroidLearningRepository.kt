@@ -12,6 +12,7 @@ import com.examen.civique.domain.repository.LearningRepository
 import com.examen.civique.domain.engine.ErrorTracker
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.UUID
 
 class AndroidLearningRepository(
     private val learningDao: LearningDao,
@@ -40,6 +41,7 @@ class AndroidLearningRepository(
         val total = totalQuestions
         resultDao.insert(
             QuizResultEntity(
+                syncId = UUID.randomUUID().toString(),
                 score = correct,
                 totalQuestions = total,
                 correctAnswers = correct,
@@ -61,6 +63,7 @@ class AndroidLearningRepository(
 
     private fun QuizResultEntity.toSessionResult() = SessionResult(
         id = id,
+        syncId = syncId,
         type = runCatching { SessionType.valueOf(sessionType) }.getOrDefault(SessionType.QUIZ),
         score = score,
         totalQuestions = totalQuestions,

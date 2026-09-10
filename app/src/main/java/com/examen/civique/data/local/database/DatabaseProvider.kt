@@ -19,7 +19,7 @@ object DatabaseProvider {
                 AppDatabase::class.java,
                 "examen_civique_database"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
 
             INSTANCE = instance
@@ -65,6 +65,36 @@ object DatabaseProvider {
     private val MIGRATION_4_5 = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE answer_records ADD COLUMN source TEXT NOT NULL DEFAULT 'QUIZ'")
+        }
+    }
+
+    private val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS question_reports (
+                    reportId TEXT NOT NULL PRIMARY KEY,
+                    questionId TEXT NOT NULL,
+                    reason TEXT NOT NULL,
+                    comment TEXT,
+                    createdAt INTEGER NOT NULL,
+                    source TEXT NOT NULL,
+                    selectedAnswer TEXT,
+                    displayedCorrectAnswer TEXT,
+                    appVersion TEXT NOT NULL,
+                    questionDataVersion TEXT,
+                    userId TEXT,
+                    status TEXT NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
+    private val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE answer_records ADD COLUMN syncId TEXT")
+            db.execSQL("ALTER TABLE quiz_results ADD COLUMN syncId TEXT")
         }
     }
 }

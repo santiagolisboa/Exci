@@ -11,6 +11,8 @@ import com.examen.civique.data.local.entity.QuizResultEntity
 import com.examen.civique.data.local.entity.FavoriteQuestionEntity
 import com.examen.civique.data.local.entity.QuestionErrorEntity
 import com.examen.civique.data.local.entity.AnswerAttemptEntity
+import com.examen.civique.data.local.entity.QuestionReportEntity
+import com.examen.civique.data.local.dao.QuestionReportDao
 
 @Database(
     entities = [
@@ -18,9 +20,10 @@ import com.examen.civique.data.local.entity.AnswerAttemptEntity
         CourseProgressEntity::class,
         FavoriteQuestionEntity::class,
         QuestionErrorEntity::class,
-        AnswerAttemptEntity::class
+        AnswerAttemptEntity::class,
+        QuestionReportEntity::class
     ],
-    version = 5,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,4 +33,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun courseProgressDao(): CourseProgressDao
     abstract fun favoriteQuestionDao(): FavoriteQuestionDao
     abstract fun learningDao(): LearningDao
+    abstract fun questionReportDao(): QuestionReportDao
 }

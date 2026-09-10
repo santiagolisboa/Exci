@@ -9,6 +9,8 @@ data class QuizResultEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
+    val syncId: String? = null,
+
     val score: Int,
     val totalQuestions: Int,
     val correctAnswers: Int,

@@ -42,27 +42,10 @@ fun HomeScreen(
     onOpenCourses: () -> Unit = {},
     onOpenErrors: () -> Unit = {},
     onOpenStats: () -> Unit = {},
-    onOpenFavorites: () -> Unit = {}
+    onOpenFavorites: () -> Unit = {},
+    onOpenSettings: () -> Unit = {}
 ) {
-    var showAppearance by remember { mutableStateOf(false) }
-    val effectiveTheme = themeMode ?: if (isSystemInDarkTheme()) ThemeMode.DARK else ThemeMode.LIGHT
     val compact = adaptiveInfo.windowSizeClass.windowWidthSizeClass == WindowWidthSizeClass.COMPACT
-
-    if (showAppearance) {
-        AlertDialog(
-            onDismissRequest = { showAppearance = false },
-            title = { Text("Apparence") },
-            text = {
-                Column {
-                    ThemeChoice("Mode clair", ThemeMode.LIGHT, effectiveTheme, onThemeSelected)
-                    ThemeChoice("Mode sombre", ThemeMode.DARK, effectiveTheme, onThemeSelected)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAppearance = false }) { Text("Fermer") }
-            }
-        )
-    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -77,7 +60,7 @@ fun HomeScreen(
                     Text("Examen Civique", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                     Text("Continuez votre préparation", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = { showAppearance = true }) {
+                IconButton(onClick = onOpenSettings) {
                     Icon(Icons.Default.Settings, contentDescription = "Paramètres")
                 }
             }
@@ -195,16 +178,5 @@ private fun NavigationRow(
         }
         count?.let { Text(it.toString(), fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 8.dp)) }
         Icon(Icons.Default.ChevronRight, contentDescription = "Ouvrir $title", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun ThemeChoice(label: String, mode: ThemeMode, selected: ThemeMode, onSelected: (ThemeMode) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable { onSelected(mode) }.padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(selected = mode == selected, onClick = { onSelected(mode) })
-        Text(label, modifier = Modifier.padding(start = 8.dp))
     }
 }

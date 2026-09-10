@@ -40,6 +40,10 @@ import com.examen.civique.data.repository.AndroidLearningRepository
 import com.examen.civique.data.repository.AndroidAnswerAttemptRepository
 import com.examen.civique.data.repository.StaticCourseRepository
 import com.examen.civique.data.repository.StaticQuestionRepository
+import com.examen.civique.data.repository.AndroidAccountPreferenceRepository
+import com.examen.civique.data.repository.AndroidQuestionReportRepository
+import com.examen.civique.data.repository.SupabaseAuthRepository
+import com.examen.civique.data.remote.SupabaseProvider
 import com.examen.civique.ui.courses.CoursesAdaptiveScreen
 import com.examen.civique.ui.courses.CourseViewModel
 import com.examen.civique.ui.courses.CourseViewModelFactory
@@ -65,6 +69,14 @@ import com.examen.civique.domain.model.ExitConsequence
 import com.examen.civique.domain.model.ExitPolicy
 import com.examen.civique.domain.model.SessionType
 import com.examen.civique.domain.model.displayName
+import com.examen.civique.ui.account.AccountViewModel
+import com.examen.civique.ui.account.AccountViewModelFactory
+import com.examen.civique.ui.account.AccountWelcomeScreen
+import com.examen.civique.ui.account.AuthScreen
+import com.examen.civique.ui.account.ConfirmEmailScreen
+import com.examen.civique.ui.account.SettingsScreen
+import com.examen.civique.ui.report.QuestionReportViewModel
+import com.examen.civique.ui.report.QuestionReportViewModelFactory
 
 @Composable
 fun AppNavigation(
@@ -79,6 +91,20 @@ fun AppNavigation(
 
     val database =
         DatabaseProvider.getDatabase(context)
+
+    val accountPreferences = remember(context) { AndroidAccountPreferenceRepository(context) }
+    val authRepository = remember { SupabaseAuthRepository(SupabaseProvider.client) }
+    val accountViewModel: AccountViewModel = viewModel(
+        factory = AccountViewModelFactory(authRepository, accountPreferences)
+    )
+    val reportRepository = remember(database) { AndroidQuestionReportRepository(database.questionReportDao()) }
+    val appVersion = remember(context) {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "unknown"
+    }
+    val reportViewModel: QuestionReportViewModel = viewModel(
+        factory = QuestionReportViewModelFactory(reportRepository, authRepository, appVersion)
+    )
+    val initialDestination = remember { if (accountViewModel.shouldShowProposal()) "accountWelcome" else "home" }
 
     val questionRepository =
         StaticQuestionRepository()
@@ -189,14 +215,14 @@ fun AppNavigation(
             )
         }
 
-    val showNavigationSuite = true
+    val showNavigationSuite = currentDestination?.route !in setOf("accountWelcome", "signUp", "signIn", "confirmEmail")
     var activeExamViewModel by remember { mutableStateOf<ExamViewModel?>(null) }
     var examActive by remember { mutableStateOf(false) }
     var pendingExit by remember { mutableStateOf(ExitConsequence.NONE) }
 
     val navigateHome = {
         navController.navigate("home") {
-            popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+            popUpTo("home") { inclusive = false }
             launchSingleTop = true
             restoreState = true
         }
@@ -267,9 +293,7 @@ fun AppNavigation(
                                 else pendingExit = currentExitConsequence
                             } else navController.navigate(destination.route) {
 
-                                popUpTo(
-                                    navController.graph.findStartDestination().id
-                                ) {
+                                popUpTo("home") {
                                     saveState = true
                                 }
 
@@ -285,8 +309,71 @@ fun AppNavigation(
 
         NavHost(
             navController = navController,
-            startDestination = "home"
+            startDestination = initialDestination
         ) {
+
+        composable("accountWelcome") {
+            AccountWelcomeScreen(
+                onCreate = {
+                    accountViewModel.markProposalSeen()
+                    navController.navigate("signUp")
+                },
+                onSignIn = {
+                    accountViewModel.markProposalSeen()
+                    navController.navigate("signIn")
+                },
+                onGuest = {
+                    accountViewModel.markProposalSeen()
+                    navController.navigate("home") { popUpTo("accountWelcome") { inclusive = true } }
+                }
+            )
+        }
+
+        composable("signUp") {
+            AuthScreen(
+                createAccount = true,
+                viewModel = accountViewModel,
+                onBack = { navController.popBackStack() },
+                onSwitch = { navController.navigate("signIn") { launchSingleTop = true } },
+                onAuthenticated = {
+                    navController.navigate("home") { popUpTo("signUp") { inclusive = true } }
+                },
+                onConfirmationRequired = { email ->
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("confirmation_email", email)
+                    navController.navigate("confirmEmail")
+                }
+            )
+        }
+
+        composable("confirmEmail") {
+            val email = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("confirmation_email")
+                .orEmpty()
+            ConfirmEmailScreen(
+                email = email,
+                onConfirmed = {
+                    navController.navigate("signIn") {
+                        popUpTo("signUp") { inclusive = true }
+                    }
+                },
+                onUseAnotherEmail = { navController.popBackStack() }
+            )
+        }
+
+        composable("signIn") {
+            AuthScreen(
+                createAccount = false,
+                viewModel = accountViewModel,
+                onBack = { navController.popBackStack() },
+                onSwitch = { navController.navigate("signUp") { launchSingleTop = true } },
+                onAuthenticated = {
+                    navController.navigate("home") { popUpTo("signIn") { inclusive = true } }
+                }
+            )
+        }
 
         composable("home") {
 
@@ -333,7 +420,18 @@ fun AppNavigation(
 
                     navController.navigate("stats")
                 },
-                onOpenFavorites = { navController.navigate("favorites") }
+                onOpenFavorites = { navController.navigate("favorites") },
+                onOpenSettings = { navController.navigate("settings") }
+            )
+        }
+
+        composable("settings") {
+            SettingsScreen(
+                viewModel = accountViewModel,
+                themeMode = themeMode,
+                onThemeSelected = onThemeSelected,
+                onCreate = { navController.navigate("signUp") },
+                onSignIn = { navController.navigate("signIn") }
             )
         }
 
@@ -355,6 +453,7 @@ fun AppNavigation(
 
             QuizScreen(
                 viewModel = quizViewModel,
+                reportViewModel = reportViewModel,
                 adaptiveInfo = adaptiveInfo,
 
                 onQuizFinished = {
@@ -409,6 +508,7 @@ fun AppNavigation(
 
             ErrorReviewScreen(
                 viewModel = reviewViewModel,
+                reportViewModel = reportViewModel,
                 onReview = { ids ->
                     quizViewModel.startQuiz(ids, SessionType.ERROR_REVIEW)
                     navController.navigate("quiz")
@@ -419,6 +519,7 @@ fun AppNavigation(
         composable("favorites") {
             FavoritesScreen(
                 viewModel = reviewViewModel,
+                reportViewModel = reportViewModel,
                 onReview = { ids ->
                     quizViewModel.startQuiz(ids, SessionType.FAVORITES_REVIEW)
                     navController.navigate("quiz")
@@ -461,6 +562,7 @@ fun AppNavigation(
 
                 ExamScreen(
                     viewModel = examViewModel,
+                    reportViewModel = reportViewModel,
                     adaptiveInfo = adaptiveInfo,
 
                     onExamFinished = {
@@ -559,6 +661,7 @@ fun AppNavigation(
                 ExamReviewScreen(
                     errors =
                         examViewModel.wrongAnswerReviews,
+                    reportViewModel = reportViewModel,
 
                     onGoHome = {
 

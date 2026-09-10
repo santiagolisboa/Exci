@@ -48,6 +48,7 @@ class AdaptiveTest {
         // Navigation items should be visible
         composeTestRule.onNodeWithText("Accueil").assertIsDisplayed()
         composeTestRule.onNodeWithText("Cours").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("brand_splash").assertDoesNotExist()
     }
 
     @OptIn(ExperimentalMaterial3AdaptiveApi::class)
