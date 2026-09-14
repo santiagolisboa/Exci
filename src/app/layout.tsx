@@ -1,21 +1,18 @@
-import type { Metadata } from "next";
-import { AppProvider } from "@/components/app-provider";
-import { AppShell } from "@/components/app-shell";
+import { headers } from "next/headers";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: { default: "EXCI — Préparation à l’examen civique", template: "%s — EXCI" },
-  description: "Préparez l’examen civique français avec des questions officielles, des quiz et des examens blancs.",
-};
+const themeScript = `(function(){try{var p=location.hostname==='pigeons.click'||location.hostname==='www.pigeons.click';var k=p?'pigeons-theme':'exci-theme';var t=localStorage.getItem(k)||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=d?'dark':'light';document.documentElement.style.colorScheme=d?'dark':'light'}catch(e){}})()`;
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = (await headers()).get("x-site-locale") ?? "fr";
   return (
     <html
-      lang="fr"
+      lang={locale}
       suppressHydrationWarning
       data-scroll-behavior="smooth"
     >
-      <body><AppProvider><AppShell>{children}</AppShell></AppProvider></body>
+      <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
+      <body>{children}</body>
     </html>
   );
 }

@@ -26,6 +26,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="header-actions"><ThemeControl />{user ? <button className="account-button" onClick={() => void signOut()} type="button" title="Se déconnecter"><Icon name="user" width={18} height={18} /><span className="account-email">{user.email}</span></button> : <Link className="account-button" href="/auth/login"><Icon name="user" width={18} height={18} /><span>Connexion</span></Link>}</div>
     </div></header>
     <main className="site-content">{children}</main>
+    {!isFocusedFlow ? <footer className="exci-footer"><div><Link className="brand" href="/"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>EXCI</span></Link><span>Un projet Pigeons — créé par Santiago LISBOA</span></div><span>© 2026 Pigeons</span></footer> : null}
     {!isFocusedFlow ? <nav className="mobile-nav" aria-label="Navigation mobile">{navigation.map((item) => <Link className={pathname === item.href ? "active" : ""} href={item.href} key={item.href}><Icon name={item.icon} width={22} height={22} /><span>{item.label}</span></Link>)}</nav> : null}
   </div>;
 }

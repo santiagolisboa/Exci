@@ -1,0 +1,3 @@
+export function MobileComingSoon() {
+  return <section className="mobile-coming-soon" aria-labelledby="mobile-apps-title"><div><p className="eyebrow">Emportez vos révisions</p><h2 id="mobile-apps-title">EXCI arrive bientôt sur iPhone et Android.</h2><p>Une même préparation, pensée pour vous suivre partout. Les applications mobiles sont en cours de finalisation.</p></div><div className="store-badges" aria-label="Applications prochainement disponibles"><div className="store-badge"><span className="store-symbol">A</span><span><small>Bientôt sur</small><strong>App Store</strong></span></div><div className="store-badge"><span className="play-symbol" aria-hidden="true" /><span><small>Bientôt sur</small><strong>Google Play</strong></span></div></div></section>;
+}

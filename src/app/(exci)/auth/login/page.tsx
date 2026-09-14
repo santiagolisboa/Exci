@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { login } from "@/app/auth/actions";
+import { login } from "@/app/(exci)/auth/actions";
 
 export const metadata: Metadata = { title: "Connexion" };
 

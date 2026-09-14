@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { signUp } from "@/app/auth/actions";
+import { signUp } from "@/app/(exci)/auth/actions";
 
 export const metadata: Metadata = { title: "Créer un compte" };
 type Props = { searchParams: Promise<{ status?: string | string[] }> };

@@ -28,6 +28,7 @@ type Theme = "light" | "dark" | "system";
 type AppContextValue = {
   progress: LocalProgress;
   hydrated: boolean;
+  authReady: boolean;
   user: User | null;
   theme: Theme;
   toggleFavorite: (questionId: string) => void;
@@ -51,6 +52,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<LocalProgress>(emptyProgress);
   const [hydrated, setHydrated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(!isSupabaseConfigured());
   const [theme, setThemeState] = useState<Theme>("system");
   const pathname = usePathname();
   const syncedUser = useRef<string | null>(null);
@@ -85,9 +87,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     const supabase = createClient();
-    void supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    void supabase.auth.getUser().then(({ data }) => { setUser(data.user); setAuthReady(true); });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAuthReady(true);
     });
     return () => data.subscription.unsubscribe();
   }, [pathname]);
@@ -206,6 +209,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       progress,
       hydrated,
+      authReady,
       user,
       theme,
       toggleFavorite,
@@ -215,7 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTheme,
       signOut,
     }),
-    [progress, hydrated, user, theme, toggleFavorite, recordAttempt, recordExam, submitReport, setTheme, signOut],
+    [progress, hydrated, authReady, user, theme, toggleFavorite, recordAttempt, recordExam, submitReport, setTheme, signOut],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
