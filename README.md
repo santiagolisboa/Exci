@@ -4,7 +4,7 @@ Application Next.js de préparation à l’examen civique français. La V1 fonct
 
 ## Fonctionnalités
 
-- 244 questions officielles issues de la source Android EXCI ;
+- 244 questions d’entraînement synchronisées depuis la source Android EXCI ;
 - quiz rapide de 10 questions avec reprise de session ;
 - examen blanc de 40 questions en 45 minutes avec timer à échéance absolue ;
 - favoris, revue des erreurs, statistiques et signalements ;
@@ -29,8 +29,10 @@ npm run lint
 npm run build
 ```
 
-`npm run sync:questions` régénère `src/data/questions.json` à partir de `../android/app/src/main/java/com/examen/civique/data/local/QuestionsData.kt`. Le script vérifie le nombre et l’unicité des questions avant d’écrire le fichier.
+`npm run sync:questions` régénère `src/data/questions.json` à partir de `../android/app/src/main/java/com/examen/civique/data/local/QuestionsData.kt`. Le script valide le schéma, les identifiants, les textes et les réponses avant d’écrire le fichier. Les indicateurs `official` et `verified` sont des métadonnées héritées de la source Android, pas une preuve documentaire ; voir `docs/QUESTION_AUDIT.md`.
 
 ## Supabase
 
 Les migrations versionnées sont dans `supabase/migrations`. Elles créent les tables de progression et activent des politiques RLS limitées à `auth.uid()`.
+
+L’authentification email est prête par défaut. L’option Google est masquée tant que sa configuration n’est pas complète ; voir `docs/GOOGLE_AUTH_SETUP.md`.

@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validateQuestions } from "./validate-questions.mjs";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const sourcePath = resolve(
@@ -108,6 +109,11 @@ if (questions.length !== 244 || ids.size !== questions.length) {
   throw new Error(
     `Synchronisation incomplète: ${questions.length} questions, ${ids.size} identifiants uniques.`,
   );
+}
+
+const validationErrors = validateQuestions(questions);
+if (validationErrors.length) {
+  throw new Error(`Banque générée invalide:\n${validationErrors.join("\n")}`);
 }
 
 mkdirSync(dirname(outputPath), { recursive: true });

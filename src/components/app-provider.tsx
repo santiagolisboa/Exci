@@ -15,10 +15,12 @@ import {
 
 import {
   emptyProgress,
+  mergeProgress,
   progressStorageKey,
+  sanitizeProgress,
   type AnswerAttempt,
-  type ExamResult,
   type LocalProgress,
+  type PracticeResult,
   type QuestionReport,
 } from "@/lib/progress";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -30,10 +32,11 @@ type AppContextValue = {
   hydrated: boolean;
   authReady: boolean;
   user: User | null;
+  syncStatus: "local" | "syncing" | "synced" | "offline" | "error";
   theme: Theme;
   toggleFavorite: (questionId: string) => void;
   recordAttempt: (attempt: Omit<AnswerAttempt, "id" | "answeredAt">) => void;
-  recordExam: (result: Omit<ExamResult, "id" | "completedAt">) => void;
+  recordResult: (result: Omit<PracticeResult, "id" | "completedAt">) => void;
   submitReport: (report: Omit<QuestionReport, "id" | "createdAt" | "synced">) => Promise<boolean>;
   setTheme: (theme: Theme) => void;
   signOut: () => Promise<void>;
@@ -48,19 +51,38 @@ function identifier() {
   });
 }
 
+function storedProgress(key: string) {
+  try {
+    return sanitizeProgress(JSON.parse(localStorage.getItem(key) ?? "null"));
+  } catch {
+    localStorage.removeItem(key);
+    return { ...emptyProgress };
+  }
+}
+
+function userProgressKey(userId: string) {
+  return `${progressStorageKey}:user:${userId}`;
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<LocalProgress>(emptyProgress);
   const [hydrated, setHydrated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [syncStatus, setSyncStatus] = useState<AppContextValue["syncStatus"]>("local");
+  const [syncVersion, setSyncVersion] = useState(0);
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured());
   const [theme, setThemeState] = useState<Theme>("system");
   const pathname = usePathname();
   const syncedUser = useRef<string | null>(null);
+  const progressRef = useRef(progress);
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(progressStorageKey);
-      if (saved) setProgress({ ...emptyProgress, ...JSON.parse(saved) });
+      setProgress(storedProgress(progressStorageKey));
       const savedTheme = localStorage.getItem("exci-theme");
       if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
         setThemeState(savedTheme);
@@ -71,8 +93,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(progressStorageKey, JSON.stringify(progress));
-  }, [hydrated, progress]);
+    if (hydrated) localStorage.setItem(user ? userProgressKey(user.id) : progressStorageKey, JSON.stringify(progress));
+  }, [hydrated, progress, user]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -87,8 +109,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
     const supabase = createClient();
-    void supabase.auth.getUser().then(({ data }) => { setUser(data.user); setAuthReady(true); });
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        setProgress(storedProgress(progressStorageKey));
+        setSyncStatus("local");
+      }
+      setUser(data.user);
+      setAuthReady(true);
+    });
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        setProgress(storedProgress(progressStorageKey));
+        setSyncStatus("local");
+      }
       setUser(session?.user ?? null);
       setAuthReady(true);
     });
@@ -96,37 +129,81 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    if (!hydrated || !user || !isSupabaseConfigured() || syncedUser.current === user.id) return;
-    syncedUser.current = user.id;
+    const retry = () => {
+      syncedUser.current = null;
+      setSyncVersion((value) => value + 1);
+    };
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated || !isSupabaseConfigured()) return;
+    if (!user) {
+      syncedUser.current = null;
+      return;
+    }
+    if (syncedUser.current === user.id) return;
+    if (!navigator.onLine) {
+      queueMicrotask(() => setSyncStatus("offline"));
+      return;
+    }
     let cancelled = false;
     const supabase = createClient();
+    const local = mergeProgress(progressRef.current, storedProgress(userProgressKey(user.id)));
+    queueMicrotask(() => setSyncStatus("syncing"));
     void Promise.all([
       supabase.from("favorites").select("question_id"),
       supabase.from("answer_attempts").select("id,question_id,selected_answer_index,correct,mode,answered_at"),
-      supabase.from("quiz_results").select("id,score,total,completed_at").eq("mode", "exam"),
-    ]).then(async ([favoriteResult, attemptResult, examResult]) => {
+      supabase.from("quiz_results").select("id,mode,score,total,completed_at"),
+      supabase.from("question_reports").select("id,question_id,reason,details,created_at"),
+    ]).then(async ([favoriteResult, attemptResult, practiceResult, reportResult]) => {
       if (cancelled) return;
+      const readError = favoriteResult.error ?? attemptResult.error ?? practiceResult.error ?? reportResult.error;
+      if (readError) throw readError;
       const remoteFavorites = (favoriteResult.data ?? []).map((row) => row.question_id as string);
       const remoteAttempts: AnswerAttempt[] = (attemptResult.data ?? []).map((row) => ({
         id: row.id as string, questionId: row.question_id as string,
         selectedAnswerIndex: row.selected_answer_index as number, correct: row.correct as boolean,
         mode: row.mode as AnswerAttempt["mode"], answeredAt: row.answered_at as string,
       }));
-      const remoteExams: ExamResult[] = (examResult.data ?? []).map((row) => ({
-        id: row.id as string, score: row.score as number, total: row.total as number, completedAt: row.completed_at as string,
+      const remoteResults: PracticeResult[] = (practiceResult.data ?? []).map((row) => ({
+        id: row.id as string, mode: row.mode as PracticeResult["mode"], score: row.score as number, total: row.total as number, completedAt: row.completed_at as string,
       }));
-      const favorites = [...new Set([...progress.favorites, ...remoteFavorites])];
-      const attempts = [...new Map([...remoteAttempts, ...progress.attempts].map((item) => [item.id, item])).values()];
-      const exams = [...new Map([...remoteExams, ...progress.exams].map((item) => [item.id, item])).values()];
-      setProgress((current) => ({ ...current, favorites, attempts, exams }));
-      await Promise.all([
-        favorites.length ? supabase.from("favorites").upsert(favorites.map((questionId) => ({ user_id: user.id, question_id: questionId }))) : Promise.resolve(),
-        progress.attempts.length ? supabase.from("answer_attempts").upsert(progress.attempts.map((attempt) => ({ id: attempt.id, user_id: user.id, question_id: attempt.questionId, selected_answer_index: attempt.selectedAnswerIndex, correct: attempt.correct, mode: attempt.mode, answered_at: attempt.answeredAt }))) : Promise.resolve(),
-        progress.exams.length ? supabase.from("quiz_results").upsert(progress.exams.map((exam) => ({ id: exam.id, user_id: user.id, mode: "exam", score: exam.score, total: exam.total, completed_at: exam.completedAt }))) : Promise.resolve(),
+      const remoteReports: QuestionReport[] = (reportResult.data ?? []).map((row) => ({
+        id: row.id as string, questionId: row.question_id as string, reason: row.reason as string,
+        details: (row.details as string | null) ?? "", createdAt: row.created_at as string, synced: true,
+      }));
+      const merged = mergeProgress(local, {
+        favorites: remoteFavorites,
+        favoriteRemovals: [],
+        attempts: remoteAttempts,
+        results: remoteResults,
+        reports: remoteReports,
+      });
+      const writes = await Promise.all([
+        merged.favorites.length ? supabase.from("favorites").upsert(merged.favorites.map((questionId) => ({ user_id: user.id, question_id: questionId }))) : Promise.resolve({ error: null }),
+        local.attempts.length ? supabase.from("answer_attempts").upsert(local.attempts.map((attempt) => ({ id: attempt.id, user_id: user.id, question_id: attempt.questionId, selected_answer_index: attempt.selectedAnswerIndex, correct: attempt.correct, mode: attempt.mode, answered_at: attempt.answeredAt }))) : Promise.resolve({ error: null }),
+        local.results.length ? supabase.from("quiz_results").upsert(local.results.map((result) => ({ id: result.id, user_id: user.id, mode: result.mode, score: result.score, total: result.total, completed_at: result.completedAt }))) : Promise.resolve({ error: null }),
+        local.reports.filter(({ synced }) => !synced).length ? supabase.from("question_reports").upsert(local.reports.filter(({ synced }) => !synced).map((report) => ({ id: report.id, user_id: user.id, question_id: report.questionId, reason: report.reason, details: report.details || null, created_at: report.createdAt })), { onConflict: "id", ignoreDuplicates: true }) : Promise.resolve({ error: null }),
+        local.favoriteRemovals.length ? supabase.from("favorites").delete().eq("user_id", user.id).in("question_id", local.favoriteRemovals) : Promise.resolve({ error: null }),
       ]);
+      const writeError = writes.find((result) => result.error)?.error;
+      if (writeError) throw writeError;
+      const syncedReportIds = new Set(local.reports.map(({ id }) => id));
+      setProgress({
+        ...merged,
+        favoriteRemovals: [],
+        reports: merged.reports.map((report) => syncedReportIds.has(report.id) ? { ...report, synced: true } : report),
+      });
+      localStorage.removeItem(progressStorageKey);
+      syncedUser.current = user.id;
+      setSyncStatus("synced");
+    }).catch(() => {
+      if (!cancelled) setSyncStatus(navigator.onLine ? "error" : "offline");
     });
     return () => { cancelled = true; };
-  }, [hydrated, user, progress]);
+  }, [hydrated, user, syncVersion]);
 
   const toggleFavorite = useCallback((questionId: string) => {
     const selected = progress.favorites.includes(questionId);
@@ -136,6 +213,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         favorites: selected
           ? current.favorites.filter((id) => id !== questionId)
           : [...current.favorites, questionId],
+        favoriteRemovals: selected
+          ? [...new Set([...current.favoriteRemovals, questionId])]
+          : current.favoriteRemovals.filter((id) => id !== questionId),
       };
     });
     if (user && isSupabaseConfigured()) {
@@ -157,14 +237,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
-  const recordExam = useCallback(
-    (result: Omit<ExamResult, "id" | "completedAt">) => {
+  const recordResult = useCallback(
+    (result: Omit<PracticeResult, "id" | "completedAt">) => {
       const saved = { ...result, id: identifier(), completedAt: new Date().toISOString() };
       setProgress((current) => ({
         ...current,
-        exams: [...current.exams, saved],
+        results: [...current.results, saved],
       }));
-      if (user && isSupabaseConfigured()) void createClient().from("quiz_results").insert({ id: saved.id, user_id: user.id, mode: "exam", score: saved.score, total: saved.total, completed_at: saved.completedAt });
+      if (user && isSupabaseConfigured()) void createClient().from("quiz_results").insert({ id: saved.id, user_id: user.id, mode: saved.mode, score: saved.score, total: saved.total, completed_at: saved.completedAt }).then(({ error }) => { if (error) setSyncStatus(navigator.onLine ? "error" : "offline"); });
     },
     [user],
   );
@@ -211,15 +291,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hydrated,
       authReady,
       user,
+      syncStatus,
       theme,
       toggleFavorite,
       recordAttempt,
-      recordExam,
+      recordResult,
       submitReport,
       setTheme,
       signOut,
     }),
-    [progress, hydrated, authReady, user, theme, toggleFavorite, recordAttempt, recordExam, submitReport, setTheme, signOut],
+    [progress, hydrated, authReady, user, syncStatus, theme, toggleFavorite, recordAttempt, recordResult, submitReport, setTheme, signOut],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

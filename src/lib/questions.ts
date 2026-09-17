@@ -1,4 +1,5 @@
 import questionData from "@/data/questions.json";
+import { shuffledCopy } from "@/lib/practice-session";
 
 export type Question = {
   id: string;
@@ -21,9 +22,8 @@ export function getQuestion(questionId: string) {
 }
 
 export function shuffledQuestions(count: number) {
-  return [...questions]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, Math.min(count, questions.length));
+  const shuffled = shuffledCopy(questions);
+  return shuffled.slice(0, Math.max(0, Math.min(count, shuffled.length)));
 }
 
 export const categoryCount = new Set(questions.map(({ category }) => category)).size;

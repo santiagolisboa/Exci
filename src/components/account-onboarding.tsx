@@ -18,6 +18,13 @@ export function AccountOnboarding() {
     return () => window.clearTimeout(timer);
   }, [authReady, hydrated, user]);
 
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [open]);
+
   function dismiss() {
     localStorage.setItem(dismissalKey, new Date().toISOString());
     setOpen(false);
