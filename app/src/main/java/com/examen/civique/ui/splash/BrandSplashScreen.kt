@@ -43,6 +43,13 @@ fun BrandSplashScreen(
         contentAlignment = Alignment.Center
     ) {
         Image(
+            painter = painterResource(R.drawable.pigeons_logo),
+            contentDescription = "Pigeons",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(82.dp).offset(y = (-72).dp)
+                .alpha(state.logoAlpha).scale(state.logoScale)
+        )
+        Image(
             painter = painterResource(R.drawable.exci_logo),
             contentDescription = "EXCI",
             contentScale = ContentScale.Fit,

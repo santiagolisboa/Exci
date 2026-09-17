@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.examen.civique.data.repository.AndroidThemePreferenceRepository
-import com.examen.civique.navigation.AppNavigation
+import com.examen.civique.navigatiogn.AppNavigation
 import com.examen.civique.ui.theme.ExamenCiviqueTheme
 import com.examen.civique.ui.theme.ThemeViewModel
 import com.examen.civique.ui.theme.ThemeViewModelFactory
