@@ -11,6 +11,7 @@
 - [x] Signalements anonymes conservés localement et synchronisés après connexion.
 - [x] Pages privées en `noindex`; accueil, quiz et examen publics.
 - [x] AdSense désactivé par défaut et absent des parcours/personnelles/Pigeons.click.
+- [x] Vérification AdSense par `ads.txt` découplée de la diffusion des annonces et politique de confidentialité prête à être publiée avec une adresse de contact.
 - [x] Focus visible, navigation native, modales fermables avec Échap et piège de focus pour le signalement.
 - [x] Responsive mobile/tablette/desktop couvert par les feuilles de style existantes, sans largeur fixe de contenu.
 - [x] Documentation d’architecture et commandes de validation.
@@ -27,6 +28,7 @@
 - [ ] Valider humainement les 244 questions contre des sources officielles précises selon `QUESTION_AUDIT.md`.
 - [ ] Après déploiement, vérifier Google Search Console, les canonicals et les sitemaps des deux hôtes.
 - [ ] Ne passer `NEXT_PUBLIC_ADSENSE_ENABLED=true` qu’après approbation AdSense, configuration d’une CMP certifiée et ajout des vrais identifiants client/slot.
+- [ ] Suivre `ADSENSE_SETUP.md` : renseigner l’adresse de confidentialité et l’identifiant éditeur, faire valider `ads.txt`, publier le message CMP, puis seulement ajouter le slot et activer les annonces.
 - [ ] Effectuer un test réel multi-appareils (invité → inscription → connexion sur un second appareil → suppression d’un favori).
 - [ ] Effectuer une revue manuelle lecteurs d’écran (NVDA/VoiceOver) et navigateurs mobiles réels.
 - [ ] Examiner les alertes de dépendances dans le pipeline de déploiement et planifier les mises à jour sans contournement automatique.
