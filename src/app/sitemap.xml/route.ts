@@ -10,7 +10,7 @@ export function GET(request: Request) {
   const hasPrivacyContact = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL ?? "");
   const urls = pigeons
     ? [entry("https://pigeons.click/", "monthly", 1), entry("https://pigeons.click/en", "monthly", 0.8), entry("https://pigeons.click/es", "monthly", 0.8), entry("https://pigeons.click/de", "monthly", 0.8)]
-    : [entry("https://exci.pigeons.click/", "weekly", 1), entry("https://exci.pigeons.click/quiz", "weekly", 0.8), entry("https://exci.pigeons.click/exam", "weekly", 0.8), ...(hasPrivacyContact ? [entry("https://exci.pigeons.click/politique-de-confidentialite", "yearly", 0.3)] : [])];
+    : [entry("https://exci.pigeons.click/", "weekly", 1), entry("https://exci.pigeons.click/quiz", "weekly", 0.8), entry("https://exci.pigeons.click/exam", "weekly", 0.8), entry("https://exci.pigeons.click/mentions-legales", "yearly", 0.3), ...(hasPrivacyContact ? [entry("https://exci.pigeons.click/politique-de-confidentialite", "yearly", 0.3)] : [])];
   return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`, {
     headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" },
   });
