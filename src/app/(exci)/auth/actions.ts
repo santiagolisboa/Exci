@@ -141,7 +141,7 @@ export async function requestPasswordReset(
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/confirm?next=/auth/update-password`,
+      redirectTo: `${origin}/auth/recovery`,
     });
     if (error) {
       const code = authErrorCode(error, "signup");
@@ -155,6 +155,41 @@ export async function requestPasswordReset(
   }
 
   redirect("/auth/forgot-password?status=sent");
+}
+
+export async function confirmPasswordRecovery(formData: FormData) {
+  const tokenHash = formData.get("tokenHash");
+  const type = formData.get("type");
+  const validTokenHash =
+    typeof tokenHash === "string" &&
+    tokenHash.length >= 20 &&
+    tokenHash.length <= 512 &&
+    /^[A-Za-z0-9._~-]+$/u.test(tokenHash);
+
+  if (!validTokenHash || type !== "recovery") {
+    redirect("/auth/error?code=recovery_invalid");
+  }
+
+  let verificationError: AuthErrorLike | null = null;
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: "recovery",
+    });
+    verificationError = error;
+  } catch (error) {
+    technicalError("password-recovery-confirm-client", error as AuthErrorLike);
+    redirect("/auth/error?code=network_error");
+  }
+
+  if (verificationError) {
+    technicalError("password-recovery-confirm", verificationError);
+    const code = authErrorCode(verificationError, "confirmation");
+    redirect(`/auth/error?code=${code === "confirmation_expired" ? "confirmation_expired" : "recovery_invalid"}`);
+  }
+
+  redirect("/auth/update-password");
 }
 
 export async function updatePassword(
