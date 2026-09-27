@@ -79,6 +79,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           </button>
         </div>
         {state.fieldErrors?.password ? <small className="field-error" id="password-error">{state.fieldErrors.password}</small> : isSignup ? <small id="password-help">8 caractères minimum</small> : null}
+        {!isSignup ? <Link className="forgot-password-link" href="/auth/forgot-password">Mot de passe oublié ?</Link> : null}
         <SubmitButton mode={mode} />
       </form>
       <GoogleAuthButton />

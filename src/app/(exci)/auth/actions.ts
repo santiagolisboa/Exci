@@ -124,6 +124,75 @@ export async function signUp(
   redirect("/auth/sign-up?status=check_email");
 }
 
+export async function requestPasswordReset(
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const email = normalizeEmail(formData.get("email"));
+  const emailError = validateEmail(email);
+  if (emailError) return { status: "error", fieldErrors: { email: emailError } };
+
+  const origin = siteOrigin();
+  if (!origin) {
+    technicalError("password-reset-config", { code: "missing_site_url" });
+    return { status: "error", message: authMessage("configuration_error") };
+  }
+
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/auth/confirm?next=/auth/update-password`,
+    });
+    if (error) {
+      const code = authErrorCode(error, "signup");
+      technicalError("password-reset", error);
+      if (code === "rate_limited") return { status: "error", message: authMessage(code) };
+    }
+  } catch (error) {
+    technicalError("password-reset-client", error as AuthErrorLike);
+    return { status: "error", message: authMessage("network_error") };
+  }
+
+  redirect("/auth/forgot-password?status=sent");
+}
+
+export async function updatePassword(
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
+  const fieldErrors: AuthFormState["fieldErrors"] = {};
+  const passwordError = validateNewPassword(password);
+  if (passwordError) fieldErrors.password = passwordError;
+  if (typeof confirmPassword !== "string" || confirmPassword !== password) {
+    fieldErrors.confirmPassword = "Les deux mots de passe doivent être identiques.";
+  }
+  if (Object.keys(fieldErrors).length) return { status: "error", fieldErrors };
+
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      if (userError) technicalError("password-update-session", userError);
+      return { status: "error", message: authMessage("recovery_invalid") };
+    }
+    const { error } = await supabase.auth.updateUser({ password: password as string });
+    if (error) {
+      technicalError("password-update", error);
+      return { status: "error", message: "Le mot de passe n’a pas pu être modifié. Demandez un nouveau lien puis réessayez." };
+    }
+    const { error: signOutError } = await supabase.auth.signOut();
+    if (signOutError) technicalError("password-update-signout", signOutError);
+  } catch (error) {
+    technicalError("password-update-client", error as AuthErrorLike);
+    return { status: "error", message: authMessage("network_error") };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/auth/login?status=password_updated");
+}
+
 export async function updateProfile(
   _previousState: AuthFormState,
   formData: FormData,
