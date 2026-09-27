@@ -21,7 +21,7 @@
 - [x] Fournisseur email Supabase, URL du site, redirections, variables Vercel et domaines de production contrôlés.
 - [x] Droits PostgreSQL des rôles navigateur réduits au strict nécessaire ; fonctions `SECURITY DEFINER` non exécutables depuis l’API.
 - [x] En-têtes de sécurité HTTP de base et information confidentialité au moment de l’inscription.
-- [x] Signalements authentifiés enregistrés par une route serveur, prête à notifier l’adresse EXCI via Resend.
+- [x] Signalements authentifiés enregistrés par une route serveur et notifiés à l’adresse EXCI via une clé Resend limitée au domaine d’envoi vérifié.
 
 ## [ACTION SANTIAGO]
 
