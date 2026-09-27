@@ -6,15 +6,46 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/app-provider";
 import { Icon } from "@/components/icons";
 import { getDisplayQuestion, QuestionView } from "@/components/question-view";
+import { activeSessionStorageKey, preferredActiveSession, sessionIdentifier, type ActiveSession } from "@/lib/active-session";
 import { questions, shuffledQuestions, type Question } from "@/lib/questions";
 import { createExamDeadline, examDurationMs, formatRemainingTime, remainingExamTime } from "@/lib/practice-session";
 
-const examKey = "exci-exam-session-v1";
+const legacyExamKey = "exci-exam-session-v1";
 type ExamSession = { questionIds: string[]; answers: Record<string, number>; index: number; deadline: number };
+
+function sanitizeExamState(value: unknown): ExamSession | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<ExamSession>;
+  if (!Array.isArray(candidate.questionIds) || candidate.questionIds.length !== 40 || !candidate.questionIds.every((id) => typeof id === "string")) return null;
+  const restored = candidate.questionIds.map((id) => questions.find((question) => question.id === id));
+  if (restored.some((question) => !question) || typeof candidate.deadline !== "number" || !Number.isFinite(candidate.deadline)) return null;
+  const answers = candidate.answers && typeof candidate.answers === "object"
+    ? Object.fromEntries(Object.entries(candidate.answers).filter(([questionId, answer]) => candidate.questionIds?.includes(questionId) && Number.isInteger(answer) && answer >= 0 && answer < 4))
+    : {};
+  const index = Number.isInteger(candidate.index) ? Math.min(Math.max(0, candidate.index as number), 39) : 0;
+  return { questionIds: candidate.questionIds, answers, index, deadline: candidate.deadline };
+}
+
+function sanitizeActiveExam(value: unknown): ActiveSession<ExamSession> | null {
+  if (!value || typeof value !== "object") return null;
+  const candidate = value as Partial<ActiveSession<unknown>>;
+  const state = sanitizeExamState(candidate.state);
+  if (!state || typeof candidate.sessionId !== "string" || !candidate.sessionId || typeof candidate.updatedAt !== "string" || Number.isNaN(Date.parse(candidate.updatedAt)) || !Number.isInteger(candidate.progressStep)) return null;
+  return { sessionId: candidate.sessionId, progressStep: Math.max(0, candidate.progressStep as number), updatedAt: candidate.updatedAt, state };
+}
+
+function readStoredExam(key: string) {
+  try {
+    return sanitizeActiveExam(JSON.parse(localStorage.getItem(key) ?? "null"));
+  } catch {
+    localStorage.removeItem(key);
+    return null;
+  }
+}
 
 export default function ExamPage() {
   const router = useRouter();
-  const { recordAttempt, recordResult } = useApp();
+  const { authReady, user, recordAttempt, recordResult, loadActiveSession, saveActiveSession, clearActiveSession } = useApp();
   const [phase, setPhase] = useState<"intro"|"active"|"result">("intro");
   const [examQuestions, setExamQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -23,27 +54,81 @@ export default function ExamPage() {
   const [remaining, setRemaining] = useState(examDurationMs);
   const [review, setReview] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const [sessionId, setSessionId] = useState("");
+  const [loaded, setLoaded] = useState(false);
   const finishing = useRef(false);
+  const activeSession = useRef<ActiveSession<ExamSession> | null>(null);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const saved = JSON.parse(localStorage.getItem(examKey) ?? "null") as ExamSession | null;
-        if (saved?.deadline && Number.isFinite(saved.deadline) && saved.questionIds.length === 40) {
-          const restored = saved.questionIds.map((id) => questions.find((question) => question.id === id)).filter((question): question is Question => Boolean(question));
-          if (restored.length === 40) {
-            const validAnswers = Object.fromEntries(Object.entries(saved.answers ?? {}).filter(([questionId, answer]) => restored.some(({ id }) => id === questionId) && Number.isInteger(answer) && answer >= 0 && answer < 4));
-            setExamQuestions(restored); setAnswers(validAnswers); setIndex(Number.isInteger(saved.index) ? Math.min(Math.max(0, saved.index), 39) : 0); setDeadline(saved.deadline); setRemaining(remainingExamTime(saved.deadline)); setPhase("active");
-          }
-        } else if (saved) localStorage.removeItem(examKey);
-      } catch { localStorage.removeItem(examKey); }
-    }, 0);
-    return () => window.clearTimeout(timer);
+  const applySession = useCallback((session: ActiveSession<ExamSession>) => {
+    const restored = session.state.questionIds.map((id) => questions.find((question) => question.id === id)).filter((question): question is Question => Boolean(question));
+    if (restored.length !== 40) return;
+    activeSession.current = session;
+    setSessionId(session.sessionId);
+    setExamQuestions(restored);
+    setAnswers(session.state.answers);
+    setIndex(session.state.index);
+    setDeadline(session.state.deadline);
+    setRemaining(remainingExamTime(session.state.deadline));
+    setPhase("active");
   }, []);
 
   useEffect(() => {
-    if (phase === "active") localStorage.setItem(examKey, JSON.stringify({ questionIds: examQuestions.map(({id}) => id), answers, index, deadline }));
-  }, [phase, examQuestions, answers, index, deadline]);
+    if (!authReady) return;
+    let cancelled = false;
+    void (async () => {
+      const key = activeSessionStorageKey("exam", user?.id);
+      let local = readStoredExam(key);
+      if (!local) {
+        try {
+          const legacyState = sanitizeExamState(JSON.parse(localStorage.getItem(legacyExamKey) ?? "null"));
+          if (legacyState) local = { sessionId: sessionIdentifier(), progressStep: Object.keys(legacyState.answers).length, updatedAt: new Date().toISOString(), state: legacyState };
+        } catch { localStorage.removeItem(legacyExamKey); }
+      }
+      const remote = user ? sanitizeActiveExam(await loadActiveSession<ExamSession>("exam")) : null;
+      const preferred = preferredActiveSession(local, remote);
+      if (cancelled) return;
+      if (preferred) {
+        localStorage.setItem(key, JSON.stringify(preferred));
+        localStorage.removeItem(legacyExamKey);
+        applySession(preferred);
+        if (user && preferred !== remote) void saveActiveSession("exam", preferred);
+      }
+      setLoaded(true);
+    })();
+    return () => { cancelled = true; };
+  }, [applySession, authReady, loadActiveSession, saveActiveSession, user]);
+
+  useEffect(() => {
+    if (!loaded || phase !== "active" || !sessionId || examQuestions.length !== 40) return;
+    const state = { questionIds: examQuestions.map(({id}) => id), answers, index, deadline };
+    const session: ActiveSession<ExamSession> = { sessionId, progressStep: Object.keys(answers).length, updatedAt: new Date().toISOString(), state };
+    activeSession.current = session;
+    localStorage.setItem(activeSessionStorageKey("exam", user?.id), JSON.stringify(session));
+    if (user) void saveActiveSession("exam", session);
+  }, [phase, examQuestions, answers, index, deadline, loaded, saveActiveSession, sessionId, user]);
+
+  useEffect(() => {
+    if (!loaded || !user || phase !== "active") return;
+    let cancelled = false;
+    const reconcile = async () => {
+      const remote = sanitizeActiveExam(await loadActiveSession<ExamSession>("exam"));
+      if (cancelled || !remote) return;
+      const local = activeSession.current;
+      const preferred = preferredActiveSession(local, remote);
+      if (preferred === remote && remote !== local) applySession(remote);
+      else if (preferred === local && local && local !== remote) void saveActiveSession("exam", local);
+    };
+    const onVisible = () => { if (document.visibilityState === "visible") void reconcile(); };
+    const timer = window.setInterval(() => void reconcile(), 4000);
+    window.addEventListener("focus", reconcile);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", reconcile);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [applySession, loadActiveSession, loaded, phase, saveActiveSession, user]);
 
   const finishExam = useCallback(() => {
     if (finishing.current || !examQuestions.length) return;
@@ -59,8 +144,8 @@ export default function ExamPage() {
       recordAttempt({ questionId: question.id, selectedAnswerIndex: display.choices[selected].originalIndex, correct, mode: "exam" });
     }
     recordResult({ mode: "exam", score, total: examQuestions.length });
-    setFinalScore(score); setPhase("result"); localStorage.removeItem(examKey);
-  }, [answers, examQuestions, recordAttempt, recordResult]);
+    setFinalScore(score); setPhase("result"); localStorage.removeItem(activeSessionStorageKey("exam", user?.id)); void clearActiveSession("exam"); activeSession.current = null;
+  }, [answers, clearActiveSession, examQuestions, recordAttempt, recordResult, user?.id]);
 
   useEffect(() => {
     if (phase !== "active" || !deadline) return;
@@ -68,10 +153,11 @@ export default function ExamPage() {
     update(); const timer = window.setInterval(update, 1000); return () => clearInterval(timer);
   }, [phase, deadline, finishExam]);
 
-  function startExam() { const selected = shuffledQuestions(40); if (selected.length !== 40) return; const end = createExamDeadline(); finishing.current = false; setExamQuestions(selected); setAnswers({}); setIndex(0); setDeadline(end); setRemaining(examDurationMs); setReview(false); setPhase("active"); }
+  function startExam() { const selected = shuffledQuestions(40); if (selected.length !== 40) return; const end = createExamDeadline(); void clearActiveSession("exam"); localStorage.removeItem(activeSessionStorageKey("exam", user?.id)); localStorage.removeItem(legacyExamKey); activeSession.current = null; setSessionId(sessionIdentifier()); finishing.current = false; setExamQuestions(selected); setAnswers({}); setIndex(0); setDeadline(end); setRemaining(examDurationMs); setReview(false); setPhase("active"); }
   function exitExam() { if (window.confirm("Quitter l’examen blanc ? Votre session sera conservée jusqu’à la fin du temps imparti.")) router.push("/"); }
 
-  if (phase === "intro") return <section className="exam-intro"><p className="eyebrow">Conditions réelles</p><h1 className="page-title">Examen blanc</h1><p className="page-lead">Mesurez votre niveau sur une série complète. Vous pouvez naviguer entre les questions et modifier vos réponses jusqu’à la validation finale.</p><div className="exam-rules card"><div><strong>40</strong><span>questions</span></div><div><strong>45</strong><span>minutes</span></div><div><strong>1</strong><span>réponse par question</span></div></div><div className="exam-notice"><Icon name="clock" width={22} height={22} /><p><strong>Le chronomètre continue si vous changez de page.</strong><br />Votre session est reprise sur cet appareil, même après un rafraîchissement. Si le délai expire en votre absence, les réponses déjà enregistrées sont automatiquement validées à votre retour.</p></div><button className="button" disabled={questions.length < 40} onClick={startExam} type="button">Commencer l’examen <Icon name="arrow" width={19} height={19} /></button>{questions.length < 40 ? <p role="alert">La banque ne contient pas assez de questions pour créer un examen.</p> : null}</section>;
+  if (!loaded) return <div className="loading-state" role="status">Chargement de votre examen…</div>;
+  if (phase === "intro") return <section className="exam-intro"><p className="eyebrow">Conditions réelles</p><h1 className="page-title">Examen blanc</h1><p className="page-lead">Mesurez votre niveau sur une série complète. Vous pouvez naviguer entre les questions et modifier vos réponses jusqu’à la validation finale.</p><div className="exam-rules card"><div><strong>40</strong><span>questions</span></div><div><strong>45</strong><span>minutes</span></div><div><strong>1</strong><span>réponse par question</span></div></div><div className="exam-notice"><Icon name="clock" width={22} height={22} /><p><strong>Le chronomètre continue si vous changez de page.</strong><br />Avec un compte connecté, votre session est reprise et synchronisée entre vos appareils. Si le délai expire en votre absence, les réponses déjà enregistrées sont automatiquement validées à votre retour.</p></div><button className="button" disabled={questions.length < 40} onClick={startExam} type="button">Commencer l’examen <Icon name="arrow" width={19} height={19} /></button>{questions.length < 40 ? <p role="alert">La banque ne contient pas assez de questions pour créer un examen.</p> : null}</section>;
 
   if (phase === "result") {
     const incorrect = examQuestions.filter((question) => answers[question.id] !== undefined && answers[question.id] !== getDisplayQuestion(question).correctIndex);

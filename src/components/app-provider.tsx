@@ -23,6 +23,7 @@ import {
   type PracticeResult,
   type QuestionReport,
 } from "@/lib/progress";
+import type { ActiveSession } from "@/lib/active-session";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 type Theme = "light" | "dark" | "system";
@@ -38,6 +39,9 @@ type AppContextValue = {
   recordAttempt: (attempt: Omit<AnswerAttempt, "id" | "answeredAt">) => void;
   recordResult: (result: Omit<PracticeResult, "id" | "completedAt">) => void;
   submitReport: (report: Omit<QuestionReport, "id" | "createdAt" | "synced">) => Promise<boolean>;
+  loadActiveSession: <T>(mode: "quiz" | "exam") => Promise<ActiveSession<T> | null>;
+  saveActiveSession: <T>(mode: "quiz" | "exam", session: ActiveSession<T>) => Promise<boolean>;
+  clearActiveSession: (mode: "quiz" | "exam") => Promise<void>;
   setTheme: (theme: Theme) => void;
   signOut: () => Promise<void>;
 };
@@ -278,6 +282,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
+  const loadActiveSession = useCallback(async <T,>(mode: "quiz" | "exam") => {
+    if (!user || !isSupabaseConfigured()) return null;
+    const { data, error } = await createClient()
+      .from("active_practice_sessions")
+      .select("session_id,state,progress_step,updated_at")
+      .eq("user_id", user.id)
+      .eq("mode", mode)
+      .maybeSingle();
+    if (error) {
+      setSyncStatus(navigator.onLine ? "error" : "offline");
+      return null;
+    }
+    if (!data) return null;
+    return {
+      sessionId: data.session_id as string,
+      progressStep: data.progress_step as number,
+      updatedAt: data.updated_at as string,
+      state: data.state as T,
+    } satisfies ActiveSession<T>;
+  }, [user]);
+
+  const saveActiveSession = useCallback(async <T,>(mode: "quiz" | "exam", session: ActiveSession<T>) => {
+    if (!user || !isSupabaseConfigured()) return false;
+    const { error } = await createClient().from("active_practice_sessions").upsert({
+      user_id: user.id,
+      mode,
+      session_id: session.sessionId,
+      state: session.state,
+      progress_step: session.progressStep,
+      updated_at: session.updatedAt,
+    });
+    if (error) setSyncStatus(navigator.onLine ? "error" : "offline");
+    return !error;
+  }, [user]);
+
+  const clearActiveSession = useCallback(async (mode: "quiz" | "exam") => {
+    if (!user || !isSupabaseConfigured()) return;
+    const { error } = await createClient()
+      .from("active_practice_sessions")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("mode", mode);
+    if (error) setSyncStatus(navigator.onLine ? "error" : "offline");
+  }, [user]);
+
   const setTheme = useCallback((value: Theme) => setThemeState(value), []);
   const signOut = useCallback(async () => {
     if (!isSupabaseConfigured()) return;
@@ -297,10 +346,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       recordAttempt,
       recordResult,
       submitReport,
+      loadActiveSession,
+      saveActiveSession,
+      clearActiveSession,
       setTheme,
       signOut,
     }),
-    [progress, hydrated, authReady, user, syncStatus, theme, toggleFavorite, recordAttempt, recordResult, submitReport, setTheme, signOut],
+    [progress, hydrated, authReady, user, syncStatus, theme, toggleFavorite, recordAttempt, recordResult, submitReport, loadActiveSession, saveActiveSession, clearActiveSession, setTheme, signOut],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
