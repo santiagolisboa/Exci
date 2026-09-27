@@ -5,6 +5,7 @@ import test from "node:test";
 const baseMigration = await readFile(new URL("../supabase/migrations/202609140001_web_v1.sql", import.meta.url), "utf8");
 const authMigration = await readFile(new URL("../supabase/migrations/202609180001_auth_profile_hardening.sql", import.meta.url), "utf8");
 const sessionMigration = await readFile(new URL("../supabase/migrations/202609270002_active_practice_sessions.sql", import.meta.url), "utf8");
+const grantsMigration = await readFile(new URL("../supabase/migrations/202609270003_authenticated_table_grants.sql", import.meta.url), "utf8");
 
 test("les données de compte restent protégées par auth.uid()", () => {
   for (const table of ["profiles", "favorites", "course_progress", "quiz_results", "answer_attempts", "question_reports"]) {
@@ -19,6 +20,14 @@ test("les sessions actives sont privées et liées au compte", () => {
   assert.match(sessionMigration, /primary key \(user_id, mode\)/i);
   assert.match(sessionMigration, /alter table public\.active_practice_sessions enable row level security/i);
   assert.match(sessionMigration, /auth\.uid\(\) = user_id/i);
+});
+
+test("le rôle authentifié peut utiliser les tables protégées par RLS", () => {
+  for (const table of ["profiles", "favorites", "course_progress", "quiz_results", "answer_attempts", "question_reports", "active_practice_sessions"]) {
+    assert.match(grantsMigration, new RegExp(`grant [^;]+ on table public\\.${table} to authenticated`, "i"));
+  }
+  assert.doesNotMatch(grantsMigration, /\bto anon\b/i);
+  assert.doesNotMatch(grantsMigration, /service[_ -]?role/i);
 });
 
 test("la migration de profil reprend les métadonnées sans clé privilégiée", () => {
