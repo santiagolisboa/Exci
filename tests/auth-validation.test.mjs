@@ -25,5 +25,6 @@ test("les erreurs Supabase sont traduites sans exposer de détail technique", ()
   assert.equal(authErrorCode({ status: 429 }, "signup"), "rate_limited");
   assert.equal(authErrorCode({ code: "otp_expired" }, "confirmation"), "confirmation_expired");
   assert.doesNotMatch(authMessage("signup_failed"), /utilisateur existe/i);
+  assert.match(authMessage("recovery_failed"), /n’a pas pu être envoyé/i);
   assert.match(authMessage("recovery_invalid"), /réinitialisation/i);
 });

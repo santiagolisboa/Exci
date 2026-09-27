@@ -63,6 +63,7 @@ export function authMessage(code: string) {
     network_error: "Le service est injoignable. Vérifiez votre connexion puis réessayez.",
     oauth_failed: "La connexion avec Google n’a pas abouti. Aucun compte n’a été modifié.",
     rate_limited: "Trop de tentatives ont été effectuées. Patientez quelques minutes avant de réessayer.",
+    recovery_failed: "L’email de réinitialisation n’a pas pu être envoyé. Réessayez dans quelques minutes ou contactez-nous si le problème persiste.",
     recovery_invalid: "Ce lien de réinitialisation est invalide ou a expiré. Demandez un nouveau lien pour choisir un autre mot de passe.",
     session_expired: "Votre session a expiré. Connectez-vous de nouveau pour retrouver votre progression synchronisée.",
     signup_failed: "Création impossible pour le moment. Si vous avez déjà un compte, essayez de vous connecter ou de confirmer l’email reçu.",

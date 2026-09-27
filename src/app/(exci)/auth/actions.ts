@@ -147,6 +147,7 @@ export async function requestPasswordReset(
       const code = authErrorCode(error, "signup");
       technicalError("password-reset", error);
       if (code === "rate_limited") return { status: "error", message: authMessage(code) };
+      return { status: "error", message: authMessage("recovery_failed") };
     }
   } catch (error) {
     technicalError("password-reset-client", error as AuthErrorLike);
