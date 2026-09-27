@@ -37,6 +37,16 @@ function validDate(value: unknown): value is string {
   return typeof value === "string" && !Number.isNaN(Date.parse(value));
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/gu, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#039;",
+  })[character] ?? character);
+}
+
 async function sendNotification(payload: {
   reporterEmail: string;
   questionId: string;
@@ -50,6 +60,14 @@ async function sendNotification(payload: {
   const from = process.env.EXCI_REPORT_FROM_EMAIL;
   if (!apiKey || !to || !from) return false;
 
+  const reason = reasonLabels[payload.reason];
+  const details = payload.details || "Aucune précision fournie";
+  const reportedAt = new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "long",
+    timeStyle: "short",
+    timeZone: "Europe/Paris",
+  }).format(new Date(payload.createdAt));
+
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -59,18 +77,46 @@ async function sendNotification(payload: {
     body: JSON.stringify({
       from,
       to: [to],
-      subject: `[EXCI] Signalement — ${reasonLabels[payload.reason]}`,
+      subject: `Nouveau signalement EXCI : ${reason}`,
       text: [
-        "Un utilisateur a signalé une question EXCI.",
+        "Nouveau signalement EXCI",
         "",
-        `Question : ${payload.questionId}`,
+        `Question ${payload.questionId}`,
         payload.questionPrompt,
         "",
-        `Motif : ${reasonLabels[payload.reason]}`,
-        `Précisions : ${payload.details || "Aucune"}`,
-        `Compte : ${payload.reporterEmail}`,
-        `Date : ${payload.createdAt}`,
+        `Motif : ${reason}`,
+        `Précisions : ${details}`,
+        `Signalé par : ${payload.reporterEmail}`,
+        `Reçu le : ${reportedAt}`,
+        "",
+        "Ce message automatique a été envoyé par EXCI.",
       ].join("\n"),
+      html: `<!doctype html>
+<html lang="fr">
+  <body style="margin:0;background:#f4f7f5;color:#14231b;font-family:Arial,sans-serif">
+    <div style="display:none;max-height:0;overflow:hidden">Une question EXCI vient d'être signalée.</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7f5;padding:32px 12px">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border:1px solid #dce7e0;border-radius:16px;overflow:hidden">
+          <tr><td style="background:#102019;padding:24px 28px;color:#ffffff;font-size:24px;font-weight:700">EXCI</td></tr>
+          <tr><td style="padding:30px 28px">
+            <div style="color:#2d9b67;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Signalement de question</div>
+            <h1 style="margin:10px 0 22px;font-size:25px;line-height:1.25">Un nouveau signalement a été reçu</h1>
+            <div style="margin-bottom:20px;padding:18px;background:#f4f7f5;border-radius:12px">
+              <div style="margin-bottom:8px;color:#5b6c62;font-size:13px">Question ${escapeHtml(payload.questionId)}</div>
+              <div style="font-size:17px;line-height:1.5;font-weight:600">${escapeHtml(payload.questionPrompt)}</div>
+            </div>
+            <p style="margin:0 0 10px;line-height:1.5"><strong>Motif :</strong> ${escapeHtml(reason)}</p>
+            <p style="margin:0 0 10px;line-height:1.5"><strong>Précisions :</strong> ${escapeHtml(details)}</p>
+            <p style="margin:0 0 10px;line-height:1.5"><strong>Signalé par :</strong> ${escapeHtml(payload.reporterEmail)}</p>
+            <p style="margin:0;line-height:1.5"><strong>Reçu le :</strong> ${escapeHtml(reportedAt)}</p>
+          </td></tr>
+          <tr><td style="padding:18px 28px;background:#edf5f0;color:#5b6c62;font-size:12px;line-height:1.5">Message automatique envoyé par EXCI — pigeons.click</td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`,
     }),
     signal: AbortSignal.timeout(8_000),
   });
