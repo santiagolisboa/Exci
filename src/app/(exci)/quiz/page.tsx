@@ -13,7 +13,7 @@ import {
   sessionIdentifier,
   type ActiveSession,
 } from "@/lib/active-session";
-import { completeQuestionSequence } from "@/lib/question-sequence";
+import { prepareQuestionSequence } from "@/lib/question-sequence";
 import { questions, shuffledQuestions, type Question } from "@/lib/questions";
 
 const legacySessionKey = "exci-quiz-session-v1";
@@ -23,7 +23,7 @@ function sanitizeQuizState(value: unknown): QuizState | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<QuizState>;
   if (!Array.isArray(candidate.questionIds) || !candidate.questionIds.length || !candidate.questionIds.every((id) => typeof id === "string")) return null;
-  const questionIds = completeQuestionSequence(candidate.questionIds, questions.map(({ id }) => id));
+  const questionIds = candidate.questionIds;
   const restored = questionIds.map((id) => questions.find((question) => question.id === id));
   if (restored.some((question) => !question)) return null;
   const index = Number.isInteger(candidate.index) ? Math.min(Math.max(0, candidate.index as number), questionIds.length - 1) : 0;
@@ -57,7 +57,7 @@ function progressStep(state: QuizState) {
 
 export default function QuizPage() {
   const router = useRouter();
-  const { authReady, user, recordAttempt, recordResult, loadActiveSession, saveActiveSession, clearActiveSession } = useApp();
+  const { authReady, hydrated, progress, user, recordAttempt, recordResult, loadActiveSession, saveActiveSession, clearActiveSession } = useApp();
   const [sessionQuestions, setSessionQuestions] = useState<Question[]>([]);
   const [sessionId, setSessionId] = useState("");
   const [index, setIndex] = useState(0);
@@ -68,6 +68,24 @@ export default function QuizPage() {
   const [resumeSession, setResumeSession] = useState<ActiveSession<QuizState> | null>(null);
   const [loaded, setLoaded] = useState(false);
   const activeSession = useRef<ActiveSession<QuizState> | null>(null);
+  const progressRef = useRef(progress);
+
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
+
+  const prepareSession = useCallback((session: ActiveSession<QuizState>) => {
+    const prepared = prepareQuestionSequence(
+      session.state.questionIds,
+      questions.map(({ id }) => id),
+      session.state.index,
+      progressRef.current.attempts.map(({ questionId }) => questionId),
+    );
+    return {
+      ...session,
+      state: { ...session.state, questionIds: prepared.questionIds, index: prepared.index },
+    };
+  }, []);
 
   const applyState = useCallback((session: ActiveSession<QuizState>) => {
     const restored = session.state.questionIds.map((id) => questions.find((question) => question.id === id)).filter((question): question is Question => Boolean(question));
@@ -90,7 +108,9 @@ export default function QuizPage() {
     activeSession.current = null;
     setResumeSession(null);
     setSessionId(sessionIdentifier());
-    setSessionQuestions(shuffledQuestions(questions.length));
+    const completed = new Set(progressRef.current.attempts.map(({ questionId }) => questionId));
+    const remaining = shuffledQuestions(questions.length).filter(({ id }) => !completed.has(id));
+    setSessionQuestions(remaining.length ? remaining : shuffledQuestions(questions.length));
     setIndex(0);
     setScore(0);
     setSelected(null);
@@ -99,7 +119,7 @@ export default function QuizPage() {
   }, [clearActiveSession, user?.id]);
 
   useEffect(() => {
-    if (!authReady) return;
+    if (!authReady || !hydrated) return;
     let cancelled = false;
     void (async () => {
       const key = activeSessionStorageKey("quiz", user?.id);
@@ -112,7 +132,9 @@ export default function QuizPage() {
           localStorage.removeItem(legacySessionKey);
         }
       }
-      const remote = user ? sanitizeActiveQuiz(await loadActiveSession<QuizState>("quiz")) : null;
+      local = local ? prepareSession(local) : null;
+      const storedRemote = user ? sanitizeActiveQuiz(await loadActiveSession<QuizState>("quiz")) : null;
+      const remote = storedRemote ? prepareSession(storedRemote) : null;
       const preferred = preferredActiveSession(local, remote);
       if (cancelled) return;
       if (preferred) {
@@ -121,14 +143,14 @@ export default function QuizPage() {
         localStorage.removeItem(legacySessionKey);
         setResumeSession(preferred);
         setSessionId(preferred.sessionId);
-        if (user && preferred !== remote) void saveActiveSession("quiz", preferred);
+        if (user) void saveActiveSession("quiz", preferred);
       } else {
         startNewQuiz(false);
       }
       setLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [authReady, loadActiveSession, saveActiveSession, startNewQuiz, user]);
+  }, [authReady, hydrated, loadActiveSession, prepareSession, saveActiveSession, startNewQuiz, user]);
 
   useEffect(() => {
     if (!loaded || !sessionId || !sessionQuestions.length || finished || resumeSession) return;
