@@ -37,7 +37,7 @@ export default function Home() {
     <article className="seo-content" aria-labelledby="prepare-title">
       <header><p className="eyebrow">Réviser avec méthode</p><h2 id="prepare-title">Préparer l’examen civique français en ligne</h2><p>EXCI vous aide à réviser les connaissances utiles à l’examen civique de naturalisation, à votre rythme et sans inscription obligatoire.</p></header>
       <div className="seo-grid">
-        <section><span>01</span><h3>Apprendre par petites séries</h3><p>Le quiz de 10 questions permet de travailler régulièrement, de vérifier chaque réponse et de comprendre les notions à revoir.</p></section>
+        <section><span>01</span><h3>Apprendre à votre rythme</h3><p>L’entraînement parcourt les {questions.length} questions de la banque. Votre position est sauvegardée pour reprendre exactement où vous vous êtes arrêté.</p></section>
         <section><span>02</span><h3>S’entraîner en conditions d’examen</h3><p>L’examen blanc rassemble 40 questions à traiter en 45 minutes. Vous pouvez naviguer entre les questions avant de valider.</p></section>
         <section><span>03</span><h3>Cibler ses révisions</h3><p>Vos erreurs, favoris et statistiques restent disponibles sur votre appareil. Un compte permet de retrouver votre progression ailleurs.</p></section>
       </div>
@@ -51,7 +51,7 @@ export default function Home() {
         <details><summary>Faut-il créer un compte ?</summary><p>Non. Vous pouvez commencer immédiatement. Le compte sert uniquement à synchroniser votre progression entre plusieurs appareils.</p></details>
         <details><summary>Comment organiser ses révisions ?</summary><p>Commencez par de courtes séries régulières, relisez les explications de vos erreurs, puis utilisez l’examen blanc pour mesurer votre niveau sur une session complète.</p></details>
       </section>
-      <div className="seo-cta"><div><h2>Prêt à tester vos connaissances ?</h2><p>Commencez par 10 questions, sans inscription.</p></div><Link className="button" href="/quiz">Lancer un quiz</Link></div>
+      <div className="seo-cta"><div><h2>Prêt à tester vos connaissances ?</h2><p>Progressez dans les {questions.length} questions à votre rythme, sans inscription.</p></div><Link className="button" href="/quiz">Commencer l’entraînement</Link></div>
     </article>
   </>;
 }

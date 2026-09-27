@@ -13,6 +13,7 @@ import {
   sessionIdentifier,
   type ActiveSession,
 } from "@/lib/active-session";
+import { completeQuestionSequence } from "@/lib/question-sequence";
 import { questions, shuffledQuestions, type Question } from "@/lib/questions";
 
 const legacySessionKey = "exci-quiz-session-v1";
@@ -22,14 +23,15 @@ function sanitizeQuizState(value: unknown): QuizState | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<QuizState>;
   if (!Array.isArray(candidate.questionIds) || !candidate.questionIds.length || !candidate.questionIds.every((id) => typeof id === "string")) return null;
-  const restored = candidate.questionIds.map((id) => questions.find((question) => question.id === id));
+  const questionIds = completeQuestionSequence(candidate.questionIds, questions.map(({ id }) => id));
+  const restored = questionIds.map((id) => questions.find((question) => question.id === id));
   if (restored.some((question) => !question)) return null;
-  const index = Number.isInteger(candidate.index) ? Math.min(Math.max(0, candidate.index as number), candidate.questionIds.length - 1) : 0;
-  const score = Number.isInteger(candidate.score) ? Math.min(Math.max(0, candidate.score as number), candidate.questionIds.length) : 0;
+  const index = Number.isInteger(candidate.index) ? Math.min(Math.max(0, candidate.index as number), questionIds.length - 1) : 0;
+  const score = Number.isInteger(candidate.score) ? Math.min(Math.max(0, candidate.score as number), questionIds.length) : 0;
   const selected = Number.isInteger(candidate.selected) && (candidate.selected as number) >= 0 && (candidate.selected as number) < (restored[index]?.answers.length ?? 0)
     ? candidate.selected as number
     : null;
-  return { questionIds: candidate.questionIds, index, score, selected, validated: Boolean(candidate.validated) && selected !== null };
+  return { questionIds, index, score, selected, validated: Boolean(candidate.validated) && selected !== null };
 }
 
 function sanitizeActiveQuiz(value: unknown): ActiveSession<QuizState> | null {
@@ -88,7 +90,7 @@ export default function QuizPage() {
     activeSession.current = null;
     setResumeSession(null);
     setSessionId(sessionIdentifier());
-    setSessionQuestions(shuffledQuestions(10));
+    setSessionQuestions(shuffledQuestions(questions.length));
     setIndex(0);
     setScore(0);
     setSelected(null);
@@ -167,7 +169,7 @@ export default function QuizPage() {
   }
 
   if (!loaded) return <div className="loading-state" role="status">Préparation du quiz…</div>;
-  if (resumeSession) return <section className="resume-card card"><p className="eyebrow">Quiz en cours</p><h1>Reprendre votre série ?</h1><p>Vous étiez à la question {Math.min(resumeSession.state.index + 1, resumeSession.state.questionIds.length)} sur {resumeSession.state.questionIds.length}. {user ? "Votre score actuel est conservé et synchronisé avec votre compte." : "Votre score actuel est conservé sur cet appareil."}</p><div className="result-actions"><button className="button" onClick={resumeQuiz} type="button">Continuer le quiz</button><button className="button secondary" onClick={() => startNewQuiz()} type="button">Recommencer</button></div></section>;
+  if (resumeSession) return <section className="resume-card card"><p className="eyebrow">Entraînement en cours</p><h1>Reprendre où vous vous êtes arrêté ?</h1><p>Vous étiez à la question {Math.min(resumeSession.state.index + 1, resumeSession.state.questionIds.length)} sur {resumeSession.state.questionIds.length}. {user ? "Votre position et votre score sont conservés et synchronisés avec votre compte." : "Votre position et votre score sont conservés sur cet appareil."}</p><div className="result-actions"><button className="button" onClick={resumeQuiz} type="button">Continuer l’entraînement</button><button className="button secondary" onClick={() => startNewQuiz()} type="button">Recommencer depuis le début</button></div></section>;
   if (!sessionQuestions.length) return <section className="empty-state"><h1>Quiz indisponible</h1><p>Aucune question valide n’est disponible pour le moment.</p><Link className="button" href="/">Retour à l’accueil</Link></section>;
   const question = sessionQuestions[index];
   const display = getDisplayQuestion(question);
@@ -197,10 +199,13 @@ export default function QuizPage() {
     if (index === 0 && !validated || window.confirm(`Quitter le quiz ? Votre progression actuelle sera ${storageMessage}.`)) router.push("/");
   }
 
-  if (finished) return <section className="result-card card"><span className="result-kicker">Quiz terminé</span><h1>{score} <small>/ {sessionQuestions.length}</small></h1><p>{score >= 8 ? "Très bon résultat. Continuez pour consolider vos acquis." : score >= 5 ? "Vous progressez. Une nouvelle série vous aidera à renforcer les points fragiles." : "Chaque essai compte. Consultez vos erreurs puis recommencez à votre rythme."}</p><div className="result-actions"><button className="button" onClick={() => startNewQuiz()} type="button">Nouveau quiz</button><Link className="button secondary" href="/errors">Revoir mes erreurs</Link><Link className="text-link" href="/">Retour à l’accueil</Link></div></section>;
+  if (finished) {
+    const successRate = Math.round(score / sessionQuestions.length * 100);
+    return <section className="result-card card"><span className="result-kicker">Entraînement terminé</span><h1>{score} <small>/ {sessionQuestions.length}</small></h1><p>{successRate >= 80 ? "Très bon résultat. Continuez pour consolider vos acquis." : successRate >= 50 ? "Vous progressez. Revoir vos erreurs vous aidera à renforcer les points fragiles." : "Chaque réponse compte. Consultez vos erreurs puis recommencez à votre rythme."}</p><div className="result-actions"><button className="button" onClick={() => startNewQuiz()} type="button">Recommencer l’entraînement</button><Link className="button secondary" href="/errors">Revoir mes erreurs</Link><Link className="text-link" href="/">Retour à l’accueil</Link></div></section>;
+  }
 
   return <section className="practice-layout">
-    <div className="practice-header"><button className="exit-button" onClick={exitQuiz} type="button"><Icon name="close" width={19} height={19} /> Quitter</button><div className="progress-wrap"><div className="progress-label"><span>Quiz rapide</span><strong>{index + 1} / {sessionQuestions.length}</strong></div><div aria-label="Progression du quiz" aria-valuemax={sessionQuestions.length} aria-valuemin={0} aria-valuenow={index + (validated ? 1 : 0)} className="progress-bar" role="progressbar"><i style={{ width: `${((index + (validated ? 1 : 0)) / sessionQuestions.length) * 100}%` }} /></div></div><span className="score-label">{score} bonne{score > 1 ? "s" : ""}</span></div>
+    <div className="practice-header"><button className="exit-button" onClick={exitQuiz} type="button"><Icon name="close" width={19} height={19} /> Quitter</button><div className="progress-wrap"><div className="progress-label"><span>Entraînement complet</span><strong>{index + 1} / {sessionQuestions.length}</strong></div><div aria-label="Progression de l’entraînement" aria-valuemax={sessionQuestions.length} aria-valuemin={0} aria-valuenow={index + (validated ? 1 : 0)} className="progress-bar" role="progressbar"><i style={{ width: `${((index + (validated ? 1 : 0)) / sessionQuestions.length) * 100}%` }} /></div></div><span className="score-label">{score} bonne{score > 1 ? "s" : ""}</span></div>
     <QuestionView question={question} selected={selected} validated={validated} onSelect={setSelected} />
     <div className="practice-actions">{validated ? <button className="button" onClick={next} type="button">{index === sessionQuestions.length - 1 ? "Voir le résultat" : "Question suivante"}<Icon name="arrow" width={18} height={18} /></button> : <button className="button" disabled={selected === null} onClick={validate} type="button">Valider ma réponse</button>}</div>
   </section>;
