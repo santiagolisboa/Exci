@@ -22,7 +22,7 @@ Après redéploiement, contrôler :
 
 - `https://exci.pigeons.click/politique-de-confidentialite` renvoie la politique ;
 - `https://exci.pigeons.click/ads.txt` renvoie une ligne `google.com, pub-…, DIRECT, f08c47fec0942fa0` ;
-- `https://pigeons.click/ads.txt` reste en erreur 404 ;
+- `https://pigeons.click/ads.txt` renvoie la même ligne, car AdSense vérifie le domaine racine et n'accepte plus les sous-domaines comme sites indépendants ;
 - aucun script `pagead2.googlesyndication.com` n’est chargé sur le site.
 
 Le fichier `ads.txt` est indépendant de `NEXT_PUBLIC_ADSENSE_ENABLED` afin que Google puisse vérifier le site avant l’activation des annonces.
@@ -30,7 +30,7 @@ Le fichier `ads.txt` est indépendant de `NEXT_PUBLIC_ADSENSE_ENABLED` afin que 
 ## 3. Ajouter et faire examiner le site dans AdSense
 
 1. Dans AdSense, ouvrir **Sites**, puis **Nouveau site**.
-2. Ajouter `exci.pigeons.click` et choisir la vérification par `ads.txt`.
+2. Ajouter `pigeons.click` et choisir la vérification par `ads.txt`. Le sous-domaine `exci.pigeons.click` est couvert par ce site racine.
 3. Demander la vérification, puis la revue du site.
 4. Attendre que l’état du site soit **Prêt**. La revue prend généralement quelques jours, mais peut durer de deux à quatre semaines.
 

@@ -59,6 +59,6 @@ npm.cmd run build
 
 ## SEO, publicité et déploiement
 
-Les pages privées ont `noindex` via leurs layouts. `/`, `/quiz` et `/exam` restent indexables. Les route handlers de `robots.txt`, `sitemap.xml` et `ads.txt` distinguent les deux hôtes. `ads.txt` répond 404 tant qu’AdSense est désactivé, et aucune unité publicitaire n’est rendue pendant les parcours, sur une page privée ou sur Pigeons.click.
+Les pages privées ont `noindex` via leurs layouts. `/`, `/quiz` et `/exam` restent indexables. Les route handlers de `robots.txt` et `sitemap.xml` distinguent les deux hôtes. `ads.txt` est publié sur le domaine racine et sur le sous-domaine dès qu'un identifiant éditeur valide est configuré, indépendamment de l'activation des annonces, afin de permettre la vérification AdSense du domaine racine. Aucune unité publicitaire n’est rendue pendant les parcours, sur une page privée ou sur Pigeons.click.
 
 L’expansion SEO future doit employer des pages éditoriales substantielles, avec des sources identifiées et une révision humaine. Aucun générateur de pages minces n’est prévu.
