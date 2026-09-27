@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import { headers } from "next/headers";
 import "./globals.css";
 
@@ -12,7 +13,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       data-scroll-behavior="smooth"
     >
       <head><script dangerouslySetInnerHTML={{ __html: themeScript }} /></head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
