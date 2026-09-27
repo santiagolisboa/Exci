@@ -81,6 +81,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {state.fieldErrors?.password ? <small className="field-error" id="password-error">{state.fieldErrors.password}</small> : isSignup ? <small id="password-help">8 caractères minimum</small> : null}
         {!isSignup ? <Link className="forgot-password-link" href="/auth/forgot-password">Mot de passe oublié ?</Link> : null}
         <SubmitButton mode={mode} />
+        {isSignup ? <p className="signup-privacy-notice">En créant un compte, vous acceptez que vos données soient utilisées pour authentifier votre accès et synchroniser votre progression, conformément à notre <Link href="/politique-de-confidentialite">politique de confidentialité</Link>.</p> : null}
       </form>
       <GoogleAuthButton />
       <div className="auth-links">

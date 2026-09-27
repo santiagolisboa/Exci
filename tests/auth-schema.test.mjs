@@ -6,6 +6,7 @@ const baseMigration = await readFile(new URL("../supabase/migrations/20260914000
 const authMigration = await readFile(new URL("../supabase/migrations/202609180001_auth_profile_hardening.sql", import.meta.url), "utf8");
 const sessionMigration = await readFile(new URL("../supabase/migrations/202609270002_active_practice_sessions.sql", import.meta.url), "utf8");
 const grantsMigration = await readFile(new URL("../supabase/migrations/202609270003_authenticated_table_grants.sql", import.meta.url), "utf8");
+const leastPrivilegeMigration = await readFile(new URL("../supabase/migrations/202609270004_database_least_privilege.sql", import.meta.url), "utf8");
 
 test("les données de compte restent protégées par auth.uid()", () => {
   for (const table of ["profiles", "favorites", "course_progress", "quiz_results", "answer_attempts", "question_reports"]) {
@@ -28,6 +29,16 @@ test("le rôle authentifié peut utiliser les tables protégées par RLS", () =>
   }
   assert.doesNotMatch(grantsMigration, /\bto anon\b/i);
   assert.doesNotMatch(grantsMigration, /service[_ -]?role/i);
+});
+
+test("les rôles web n'ont aucun privilège hors RLS", () => {
+  for (const table of ["profiles", "favorites", "course_progress", "quiz_results", "answer_attempts", "question_reports", "active_practice_sessions"]) {
+    assert.match(leastPrivilegeMigration, new RegExp(`revoke all on table public\\.${table} from anon, authenticated`, "i"));
+  }
+  assert.doesNotMatch(leastPrivilegeMigration, /grant [^;]*(truncate|trigger|references)/i);
+  assert.match(leastPrivilegeMigration, /revoke execute on function public\.handle_new_user\(\) from public, anon, authenticated/i);
+  assert.match(leastPrivilegeMigration, /revoke execute on function public\.rls_auto_enable\(\) from public, anon, authenticated/i);
+  assert.match(leastPrivilegeMigration, /alter policy "question_reports_insert_own" on public\.question_reports to authenticated/i);
 });
 
 test("la migration de profil reprend les métadonnées sans clé privilégiée", () => {

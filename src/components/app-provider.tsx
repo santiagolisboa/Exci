@@ -68,6 +68,30 @@ function userProgressKey(userId: string) {
   return `${progressStorageKey}:user:${userId}`;
 }
 
+async function transmitQuestionReport(report: QuestionReport) {
+  try {
+    const response = await fetch("/api/question-reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: report.id,
+        questionId: report.questionId,
+        reason: report.reason,
+        details: report.details,
+        createdAt: report.createdAt,
+      }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function transmitQuestionReports(reports: QuestionReport[]) {
+  const results = await Promise.all(reports.map(transmitQuestionReport));
+  return { error: results.every(Boolean) ? null : new Error("question_report_sync_failed") };
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<LocalProgress>(emptyProgress);
   const [hydrated, setHydrated] = useState(false);
@@ -189,7 +213,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         merged.favorites.length ? supabase.from("favorites").upsert(merged.favorites.map((questionId) => ({ user_id: user.id, question_id: questionId }))) : Promise.resolve({ error: null }),
         local.attempts.length ? supabase.from("answer_attempts").upsert(local.attempts.map((attempt) => ({ id: attempt.id, user_id: user.id, question_id: attempt.questionId, selected_answer_index: attempt.selectedAnswerIndex, correct: attempt.correct, mode: attempt.mode, answered_at: attempt.answeredAt }))) : Promise.resolve({ error: null }),
         local.results.length ? supabase.from("quiz_results").upsert(local.results.map((result) => ({ id: result.id, user_id: user.id, mode: result.mode, score: result.score, total: result.total, completed_at: result.completedAt }))) : Promise.resolve({ error: null }),
-        local.reports.filter(({ synced }) => !synced).length ? supabase.from("question_reports").upsert(local.reports.filter(({ synced }) => !synced).map((report) => ({ id: report.id, user_id: user.id, question_id: report.questionId, reason: report.reason, details: report.details || null, created_at: report.createdAt })), { onConflict: "id", ignoreDuplicates: true }) : Promise.resolve({ error: null }),
+        local.reports.filter(({ synced }) => !synced).length ? transmitQuestionReports(local.reports.filter(({ synced }) => !synced)) : Promise.resolve({ error: null }),
         local.favoriteRemovals.length ? supabase.from("favorites").delete().eq("user_id", user.id).in("question_id", local.favoriteRemovals) : Promise.resolve({ error: null }),
       ]);
       const writeError = writes.find((result) => result.error)?.error;
@@ -263,15 +287,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       };
       let synced = false;
       if (user && isSupabaseConfigured()) {
-        const supabase = createClient();
-        const { error } = await supabase.from("question_reports").insert({
-          id: localReport.id,
-          user_id: user.id,
-          question_id: report.questionId,
-          reason: report.reason,
-          details: report.details || null,
-        });
-        synced = !error;
+        synced = await transmitQuestionReport(localReport);
       }
       setProgress((current) => ({
         ...current,

@@ -3,7 +3,7 @@
 ## [AUTOMATIQUE / FAIT]
 
 - [x] Validation structurelle des 244 questions et commande `validate:questions`.
-- [x] Quiz de 10 questions sans doublon, reprise/recommencement explicites et restauration de la réponse validée.
+- [x] Entraînement continu sur toute la banque, sans doublon ni question déjà validée, avec reprise de session synchronisée.
 - [x] Examen de 40 questions, délai absolu de 45 minutes, restauration après refresh et validation des réponses partielles après expiration.
 - [x] Favoris, erreurs et statistiques fondés sur les événements réellement stockés.
 - [x] Fusion invité/compte, séparation du cache local par utilisateur, tombstones de favoris et reprise après retour réseau.
@@ -19,6 +19,9 @@
 - [x] OAuth Google sous feature flag désactivé par défaut et procédure documentée.
 - [x] Migrations `202609140001_web_v1.sql` et `202609170001_product_hardening.sql` appliquées ; tables, index et politiques RLS contrôlés dans le projet lié.
 - [x] Fournisseur email Supabase, URL du site, redirections, variables Vercel et domaines de production contrôlés.
+- [x] Droits PostgreSQL des rôles navigateur réduits au strict nécessaire ; fonctions `SECURITY DEFINER` non exécutables depuis l’API.
+- [x] En-têtes de sécurité HTTP de base et information confidentialité au moment de l’inscription.
+- [x] Signalements authentifiés enregistrés par une route serveur, prête à notifier l’adresse EXCI via Resend.
 
 ## [ACTION SANTIAGO]
 

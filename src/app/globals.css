@@ -6,6 +6,20 @@
   --brand-soft: #e1efe6; --blue: #173f73; --danger: #a33a35; --danger-soft: #f8e8e6;
   --success: #17643c; --shadow: 0 18px 50px rgb(35 50 39 / 8%);
 }
+
+.signup-privacy-notice {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: .74rem;
+  line-height: 1.55;
+}
+
+.signup-privacy-notice a {
+  color: var(--brand);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 :root[data-theme="dark"] {
   --bg: #111613; --surface: #191f1b; --surface-soft: #222a25; --text: #eff4f0;
   --muted: #aab5ad; --line: #354039; --brand: #69c38e; --brand-strong: #8ed8aa;

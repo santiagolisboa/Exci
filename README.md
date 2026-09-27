@@ -5,7 +5,7 @@ Application Next.js de préparation à l’examen civique français. La V1 fonct
 ## Fonctionnalités
 
 - 244 questions d’entraînement synchronisées depuis la source Android EXCI ;
-- quiz rapide de 10 questions avec reprise de session ;
+- entraînement continu sur toute la banque, sans reproposer les questions déjà validées, avec reprise de session ;
 - examen blanc de 40 questions en 45 minutes avec timer à échéance absolue ;
 - favoris, revue des erreurs, statistiques et signalements ;
 - inscription/connexion Supabase optionnelle et sessions SSR ;
