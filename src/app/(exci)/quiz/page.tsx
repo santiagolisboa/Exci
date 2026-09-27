@@ -167,7 +167,7 @@ export default function QuizPage() {
   }
 
   if (!loaded) return <div className="loading-state" role="status">Préparation du quiz…</div>;
-  if (resumeSession) return <section className="resume-card card"><p className="eyebrow">Quiz en cours</p><h1>Reprendre votre série ?</h1><p>Vous étiez à la question {Math.min(resumeSession.state.index + 1, resumeSession.state.questionIds.length)} sur {resumeSession.state.questionIds.length}. Votre score actuel est conservé et synchronisé avec votre compte.</p><div className="result-actions"><button className="button" onClick={resumeQuiz} type="button">Continuer le quiz</button><button className="button secondary" onClick={() => startNewQuiz()} type="button">Recommencer</button></div></section>;
+  if (resumeSession) return <section className="resume-card card"><p className="eyebrow">Quiz en cours</p><h1>Reprendre votre série ?</h1><p>Vous étiez à la question {Math.min(resumeSession.state.index + 1, resumeSession.state.questionIds.length)} sur {resumeSession.state.questionIds.length}. {user ? "Votre score actuel est conservé et synchronisé avec votre compte." : "Votre score actuel est conservé sur cet appareil."}</p><div className="result-actions"><button className="button" onClick={resumeQuiz} type="button">Continuer le quiz</button><button className="button secondary" onClick={() => startNewQuiz()} type="button">Recommencer</button></div></section>;
   if (!sessionQuestions.length) return <section className="empty-state"><h1>Quiz indisponible</h1><p>Aucune question valide n’est disponible pour le moment.</p><Link className="button" href="/">Retour à l’accueil</Link></section>;
   const question = sessionQuestions[index];
   const display = getDisplayQuestion(question);
@@ -193,7 +193,8 @@ export default function QuizPage() {
     setValidated(false);
   }
   function exitQuiz() {
-    if (index === 0 && !validated || window.confirm("Quitter le quiz ? Votre progression actuelle sera conservée et synchronisée avec votre compte.")) router.push("/");
+    const storageMessage = user ? "conservée et synchronisée avec votre compte" : "conservée sur cet appareil";
+    if (index === 0 && !validated || window.confirm(`Quitter le quiz ? Votre progression actuelle sera ${storageMessage}.`)) router.push("/");
   }
 
   if (finished) return <section className="result-card card"><span className="result-kicker">Quiz terminé</span><h1>{score} <small>/ {sessionQuestions.length}</small></h1><p>{score >= 8 ? "Très bon résultat. Continuez pour consolider vos acquis." : score >= 5 ? "Vous progressez. Une nouvelle série vous aidera à renforcer les points fragiles." : "Chaque essai compte. Consultez vos erreurs puis recommencez à votre rythme."}</p><div className="result-actions"><button className="button" onClick={() => startNewQuiz()} type="button">Nouveau quiz</button><Link className="button secondary" href="/errors">Revoir mes erreurs</Link><Link className="text-link" href="/">Retour à l’accueil</Link></div></section>;
