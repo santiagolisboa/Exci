@@ -19,7 +19,7 @@ export function PigeonsLanding({ locale }: { locale: PigeonsLocale }) {
     <header className="pigeons-header"><div className="pigeons-header-inner">
       <Link className="pigeons-wordmark" href="/" aria-label="Pigeons — home"><span className="pigeon-glyph" aria-hidden="true"><i /></span>Pigeons</Link>
       <nav aria-label={copy.nav.label}><a href="#projects">{copy.nav.projects}</a><a href="#story">{copy.nav.story}</a><a href="#approach">{copy.nav.approach}</a></nav>
-      <div className="pigeons-controls"><div className="locale-switcher" aria-label={copy.language}>{locales.map((item) => <Link aria-current={item === locale ? "page" : undefined} href={item === "fr" ? "/" : `/${item}`} key={item} title={localeNames[item]}>{item.toUpperCase()}</Link>)}</div><button aria-label={copy.theme} className="pigeons-theme-button" onClick={toggleTheme} type="button"><Icon name="sun" width={19} height={19} /></button></div>
+      <div className="pigeons-controls"><div className="locale-switcher" aria-label={copy.language}>{locales.map((item) => <Link aria-current={item === locale ? "page" : undefined} href={`/${item}`} key={item} title={localeNames[item]}>{item.toUpperCase()}</Link>)}</div><button aria-label={copy.theme} className="pigeons-theme-button" onClick={toggleTheme} type="button"><Icon name="sun" width={19} height={19} /></button></div>
     </div></header>
 
     <main>

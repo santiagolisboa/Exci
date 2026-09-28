@@ -13,14 +13,20 @@ export async function proxy(request: NextRequest) {
     const locale = pathLocale && locales.has(pathLocale)
       ? pathLocale
       : request.cookies.get("pigeons-locale")?.value ?? "fr";
+    const selectedLocale = locales.has(locale) ? locale : "fr";
+    if (isPigeonsHost && pathname === "/fr") {
+      const response = NextResponse.redirect(new URL("/", request.url));
+      response.cookies.set("pigeons-locale", "fr", { maxAge: 60 * 60 * 24 * 365, path: "/", sameSite: "lax" });
+      return response;
+    }
     const headers = new Headers(request.headers);
-    headers.set("x-site-locale", locales.has(locale) ? locale : "fr");
+    headers.set("x-site-locale", selectedLocale);
     const url = request.nextUrl.clone();
-    if (isPigeonsHost) url.pathname = `/pigeons/${locales.has(locale) ? locale : "fr"}`;
+    if (isPigeonsHost) url.pathname = `/pigeons/${selectedLocale}`;
     const response = isPigeonsHost
       ? NextResponse.rewrite(url, { request: { headers } })
       : NextResponse.next({ request: { headers } });
-    response.cookies.set("pigeons-locale", locales.has(locale) ? locale : "fr", {
+    response.cookies.set("pigeons-locale", selectedLocale, {
       maxAge: 60 * 60 * 24 * 365,
       path: "/",
       sameSite: "lax",
