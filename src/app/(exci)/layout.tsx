@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://exci.pigeons.click"),
-  title: { default: "EXCI — Préparation à l’examen civique", template: "%s — EXCI" },
+  title: { default: "EXCI — Préparation à l’examen civique", template: "%s | EXCI | Pigeons" },
   description: "Préparez l’examen civique français avec des questions d’entraînement, des quiz et des examens blancs.",
   openGraph: {
     title: "EXCI — Préparation à l’examen civique",

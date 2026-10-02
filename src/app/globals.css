@@ -121,3 +121,12 @@ button { color: inherit; }
 }
 @media (min-width: 761px) and (max-width: 1020px) { .home-hero { grid-template-columns: 1fr .65fr; gap: 28px; }.tool-grid { grid-template-columns: 1fr 1fr; }.account-prompt { grid-template-columns: 1fr; gap: 22px; }.account-prompt-actions { justify-self: start; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+
+/* Aicha shares the project-card layout and its responsive rules. */
+.aicha-project-card { margin-top:32px; background:#41356b; gap:38px; }
+.aicha-project-card .exci-project-body p,.aicha-project-card .project-status { color:#e2daf3; }
+.aicha-project-note { max-width:650px; margin:0; color:#e2daf3; font-size:.875rem; line-height:1.65; }
+
+.founder-signature,.pigeons-footer strong a,.exci-footer a { text-underline-offset:3px; }
+.founder-signature:hover,.pigeons-footer strong a:hover,.exci-footer a:hover { text-decoration:underline; }
+.pigeons-hero-copy { min-width:0; }.pigeons-site h1,.pigeons-site h2,.pigeons-site h3 { overflow-wrap:anywhere; hyphens:auto; }

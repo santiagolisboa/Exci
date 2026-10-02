@@ -1,17 +1,10 @@
-const lastModified = "2026-09-27";
-
-function entry(url: string, changeFrequency: string, priority: number) {
-  return `<url><loc>${url}</loc><lastmod>${lastModified}</lastmod><changefreq>${changeFrequency}</changefreq><priority>${priority}</priority></url>`;
-}
-
+const pigeonsUrls = ["/", "/en", "/es", "/de"];
+const exciUrls = ["/", "/quiz", "/exam", "/preparer-examen-civique"];
 export function GET(request: Request) {
-  const host = request.headers.get("host")?.split(":")[0].toLowerCase();
-  const pigeons = host === "pigeons.click" || host === "www.pigeons.click";
-  const hasPrivacyContact = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL ?? "");
-  const urls = pigeons
-    ? [entry("https://pigeons.click/", "monthly", 1), entry("https://pigeons.click/en", "monthly", 0.8), entry("https://pigeons.click/es", "monthly", 0.8), entry("https://pigeons.click/de", "monthly", 0.8)]
-    : [entry("https://exci.pigeons.click/", "weekly", 1), entry("https://exci.pigeons.click/quiz", "weekly", 0.8), entry("https://exci.pigeons.click/exam", "weekly", 0.8), entry("https://exci.pigeons.click/mentions-legales", "yearly", 0.3), ...(hasPrivacyContact ? [entry("https://exci.pigeons.click/politique-de-confidentialite", "yearly", 0.3)] : [])];
-  return new Response(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join("")}</urlset>`, {
-    headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" },
-  });
+ const host = request.headers.get("host")?.split(":")[0].toLowerCase();
+ const pigeons = host === "pigeons.click" || host === "www.pigeons.click";
+ const origin = pigeons ? "https://pigeons.click" : "https://exci.pigeons.click";
+ const alternate = pigeons ? ["fr", "en", "es", "de", "x-default"].map(locale => '<xhtml:link rel="alternate" hreflang="' + locale + '" href="https://pigeons.click' + (locale === "fr" || locale === "x-default" ? "/" : "/" + locale) + '"/>').join("") : "";
+ const urls = (pigeons ? pigeonsUrls : exciUrls).map(path => "<url><loc>" + origin + path + "</loc>" + alternate + "</url>").join("");
+ return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' + urls + '</urlset>', { headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
 }

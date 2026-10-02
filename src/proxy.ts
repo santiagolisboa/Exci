@@ -1,43 +1,30 @@
 import { NextResponse, type NextRequest } from "next/server";
-
 import { updateSession } from "@/lib/supabase/proxy";
-
+import { resolvePigeonsPath } from "@/lib/site-routing";
 export async function proxy(request: NextRequest) {
   const hostname = request.headers.get("host")?.split(":")[0].toLowerCase();
   const pathname = request.nextUrl.pathname;
-  const locales = new Set(["fr", "en", "es", "de"]);
-  const isPigeonsHost = hostname === "pigeons.click" || hostname === "www.pigeons.click";
-
-  if (isPigeonsHost || pathname.startsWith("/pigeons/")) {
-    const pathLocale = pathname.split("/").filter(Boolean).at(-1);
-    const locale = pathLocale && locales.has(pathLocale)
-      ? pathLocale
-      : request.cookies.get("pigeons-locale")?.value ?? "fr";
-    const selectedLocale = locales.has(locale) ? locale : "fr";
-    if (isPigeonsHost && pathname === "/fr") {
-      const response = NextResponse.redirect(new URL("/", request.url));
-      response.cookies.set("pigeons-locale", "fr", { maxAge: 60 * 60 * 24 * 365, path: "/", sameSite: "lax" });
-      return response;
+  const isPigeons = hostname === "pigeons.click" || hostname === "www.pigeons.click";
+  if (hostname === "www.pigeons.click") {
+    const url = request.nextUrl.clone(); url.hostname = "pigeons.click"; url.protocol = "https:"; url.port = "";
+    return NextResponse.redirect(url, 308);
+  }
+  if (isPigeons) {
+    if (pathname === "/fr") return NextResponse.redirect(new URL("/", request.url), 308);
+    if (/^\/pigeons\/(fr|en|es|de)$/.test(pathname)) {
+      const locale = pathname.split("/")[2];
+      return NextResponse.redirect(new URL(locale === "fr" ? "/" : "/" + locale, request.url), 308);
     }
-    const headers = new Headers(request.headers);
-    headers.set("x-site-locale", selectedLocale);
-    const url = request.nextUrl.clone();
-    if (isPigeonsHost) url.pathname = `/pigeons/${selectedLocale}`;
-    const response = isPigeonsHost
-      ? NextResponse.rewrite(url, { request: { headers } })
-      : NextResponse.next({ request: { headers } });
-    response.cookies.set("pigeons-locale", selectedLocale, {
-      maxAge: 60 * 60 * 24 * 365,
-      path: "/",
-      sameSite: "lax",
-    });
-    return response;
+    if (pathname === "/social/pigeons" || pathname === "/pigeons/icon.svg") return NextResponse.next();
+    const route = resolvePigeonsPath(pathname);
+    const url = request.nextUrl.clone(); url.pathname = route?.pathname ?? "/pigeons/not-found";
+    const headers = new Headers(request.headers); headers.set("x-site-locale", route?.locale ?? "fr");
+    return NextResponse.rewrite(url, { request: { headers } });
+  }
+  if (pathname.startsWith("/pigeons/")) {
+    const locale = pathname.split("/")[2];
+    if (["fr", "en", "es", "de"].includes(locale)) return NextResponse.redirect(new URL(locale === "fr" ? "/" : "/" + locale, "https://pigeons.click"), 308);
   }
   return updateSession(request);
 }
-
-export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|ads.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
-};
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|ads.txt|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"] };

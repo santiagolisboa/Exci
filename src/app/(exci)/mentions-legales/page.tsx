@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
+import { exciMetadata } from "@/lib/seo";
 import Link from "next/link";
 
-export const metadata: Metadata = {
-  title: "Mentions légales",
-  description: "Mentions légales des sites Pigeons et EXCI.",
-  alternates: { canonical: "/mentions-legales" },
-};
+export const metadata = exciMetadata("Mentions légales","Éditeur, hébergement et nature indépendante des projets Pigeons et EXCI.","/mentions-legales");
 
 export default function LegalNoticePage() {
   return <article className="legal-page">
@@ -18,7 +14,7 @@ export default function LegalNoticePage() {
 
     <section>
       <h2>Éditeur</h2>
-      <p>Les sites <strong>Pigeons</strong> et <strong>EXCI</strong> sont édités à titre personnel et non professionnel par Santiago LISBOA.</p>
+      <p>Les sites <strong>Pigeons</strong> et <strong>EXCI</strong> sont édités à titre personnel et non professionnel par <a href="https://www.linkedin.com/in/santiago-lisboa/" target="_blank" rel="noopener noreferrer">Santiago LISBOA</a>.</p>
       <p>Contact : <a href="mailto:contact@pigeons.click">contact@pigeons.click</a></p>
     </section>
 

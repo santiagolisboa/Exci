@@ -1,30 +1,21 @@
-import type { Metadata } from "next";
+import { exciMetadata, founder, studio } from "@/lib/seo";
 import Link from "next/link";
 import { HomeAdSlot } from "@/components/ad-slot";
 import { HomeExperience } from "@/components/home-experience";
 import { categoryCount, questions } from "@/lib/questions";
 
-export const metadata: Metadata = {
-  title: "Préparation à l’examen civique français",
-  description: `Préparez l’examen civique de naturalisation avec ${questions.length} questions d’entraînement, des quiz gratuits et un examen blanc de 40 questions.`,
-  alternates: { canonical: "/" },
-  keywords: ["examen civique français", "examen civique naturalisation", "quiz examen civique", "questions examen civique", "examen blanc naturalisation"],
-  openGraph: {
-    title: "EXCI — Préparation à l’examen civique français",
-    description: `${questions.length} questions d’entraînement, des quiz rapides et un examen blanc pour préparer l’examen civique.`,
-    url: "/",
-  },
-};
+export const metadata = exciMetadata("Préparer l’examen civique français", `Révisez avec ${questions.length} questions d’entraînement, des quiz gratuits et un examen blanc. EXCI, une application indépendante de Pigeons.`, "/");
 
 const jsonLd = {
   "@context": "https://schema.org",
-  "@graph": [
+  "@graph": [founder, studio,
+    { "@type": "WebPage", "@id": "https://exci.pigeons.click/#webpage", url: "https://exci.pigeons.click/", name: "Préparer l’examen civique français", inLanguage: "fr", isPartOf: { "@id": "https://exci.pigeons.click/#website" }, about: { "@id": "https://exci.pigeons.click/#application" } },
     { "@type": "WebSite", "@id": "https://exci.pigeons.click/#website", url: "https://exci.pigeons.click/", name: "EXCI", inLanguage: "fr-FR", description: "Outil gratuit de préparation à l’examen civique français." },
     {
       "@type": "WebApplication", "@id": "https://exci.pigeons.click/#application", name: "EXCI", url: "https://exci.pigeons.click/", applicationCategory: "EducationalApplication", operatingSystem: "Web", inLanguage: "fr-FR", isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
       description: `Préparation à l’examen civique avec ${questions.length} questions, des quiz et des examens blancs.`,
-      publisher: { "@type": "Organization", name: "Pigeons", url: "https://pigeons.click/" },
+      creator: { "@id": founder["@id"] }, publisher: { "@id": studio["@id"] },
     },
   ],
 };
@@ -42,9 +33,10 @@ export default function Home() {
         <section><span>03</span><h3>Cibler ses révisions</h3><p>Vos erreurs, favoris et statistiques restent disponibles sur votre appareil. Un compte permet de retrouver votre progression ailleurs.</p></section>
       </div>
       <section className="seo-topics" aria-labelledby="topics-title">
-        <div><p className="eyebrow">Programme de révision</p><h2 id="topics-title">{categoryCount} grands thèmes à maîtriser</h2></div>
+        <div><p className="eyebrow">Thèmes de la banque EXCI</p><h2 id="topics-title">{categoryCount} thèmes pour organiser vos révisions</h2></div>
         <ul><li>Principes et valeurs de la République</li><li>Institutions et vie politique</li><li>Vie en société</li><li>Histoire et culture françaises</li><li>Géographie de la France</li><li>Travail et économie</li></ul>
       </section>
+      <section><h2>Un outil de préparation indépendant</h2><p>Les questions et explications d’EXCI servent à s’entraîner. Les indicateurs de provenance hérités de la banque ne permettent pas d’attester chaque formulation contre une source officielle. Cette banque ne constitue pas la liste garantie des questions de votre épreuve ; l’examen blanc ne reproduit pas l’intégralité de ses mises en situation.</p><p><Link href="/preparer-examen-civique">Comprendre l’examen civique et organiser ses révisions</Link></p></section>
       <section className="seo-faq" aria-labelledby="faq-title">
         <p className="eyebrow">Questions fréquentes</p><h2 id="faq-title">Bien démarrer sa préparation</h2>
         <details><summary>EXCI est-il gratuit ?</summary><p>Oui. Les quiz, l’examen blanc et le suivi local de votre progression sont accessibles gratuitement.</p></details>

@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
+import { exciMetadata } from "@/lib/seo";
 import { notFound } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Politique de confidentialité",
-  description: "Politique de confidentialité du service EXCI.",
-  alternates: { canonical: "/politique-de-confidentialite" },
-};
+export const metadata = exciMetadata("Politique de confidentialité","Données traitées, progression et droits des utilisateurs d’EXCI.","/politique-de-confidentialite");
 
 export default function PrivacyPolicyPage() {
   const contactEmail = process.env.NEXT_PUBLIC_PRIVACY_CONTACT_EMAIL;
